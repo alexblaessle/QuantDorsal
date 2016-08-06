@@ -366,7 +366,7 @@ def multGauss(x, *params):
         ctr = params[i]
         amp = params[i+1]
         wid = params[i+2]
-        y = y + amp * np.exp( -((np.amin([x - ctr,x - ctr+2*pi,x - ctr-2*pi]))/wid)**2)
+        y = y + amp * np.exp( -((x - ctr)/wid)**2)
     return y
 	
 def alignDorsal(x,intensity,dorsal=0,phase=0,method='maxIntensity',opt=None):
@@ -400,60 +400,61 @@ def alignDorsal(x,intensity,dorsal=0,phase=0,method='maxIntensity',opt=None):
     nx = x.size
     n1,n2 = intensity.shape # n1 for number of colors, n2 resolution
     dx = x[2]-x[1]  # inteval
-    phi = dx*(np.arange(nx)-floor(nx/2))  # odd number of data points, 0 at center, even number, 0 at nx/2
-    id0 = mod(floor((nx-1)/2)+int(round(phase/dx)),nx)  # the position of the peak
-
-# find the dorsal intensity
-
-    dosInt = intensity[dorsal,:]
-
-# find the center with different methods
-
-    if method=='maxIntensity':
+    phi = dx*(np.arange(nx)-np.floor(nx/2))  # odd number of data points, 0 at center, even number, 0 at nx/2
+    id0 = np.mod(np.floor((nx)/2)+int(round(phase/dx)),nx)  # the position of the peak
     
-        shift = id0-np.argmax(dosInt)
+    # find the dorsal intensity
+    
+    dosInt = intensity[dorsal,:]
+    
+    # find the center with different methods
+    
+    if method=='maxIntensity':
+        
+        shift = int(id0-np.argmax(dosInt))
     
     # elif method=='UI':  due to Alex
-
-    elif method=='Illastik':
     
+    elif method=='Illastik':
+        
         if opt==None:
             opt = 0     # not indicated
         
-        shift = id0-np.argmin(np.absolute(x-opt))
+        shift = int(id0-np.argmin(np.absolute(x-opt)))
 
     elif method=='Gaussian':
-        
+    
         if opt==None:
             opt = 1     # fit with one Gaussian peak
-    
+        
         guess = [0,np.amax(dosInt),1]
         if opt>1:
             for i in range(1,opt):
-                guess += [i*2*pi/opt-pi,np.amax(dosInt)/2,1]
+                guess += [i*2*np.pi/opt-np.pi,np.amax(dosInt)/opt,1]
         
         popt, pcov = curve_fit(multGauss, x, dosInt, p0=guess)
         
-        c0 = np.array(popt[0:3:])
-        w0 = np.array(popt[1:3:])
-        cmax = c0(np.argmax(w0))   # center of the strongest peak
-        while cmax>pi:    # addjust to -pi to pi
-            cmax = cmax-2*pi
-        while cmax<-pi:
-            cmax = cmax+2*pi
-                    
+        c0 = np.array(popt[0::3])
+        w0 = np.array(popt[1::3])
+        cmax = c0[np.argmax(w0)]   # center of the strongest peak
+        while cmax>np.pi:    # addjust to -pi to pi
+            cmax = cmax-2*np.pi
+        while cmax<-np.pi:
+            cmax = cmax+2*np.pi
+    
         c1 = np.zeros_like(c0)
         for i in range(opt):
-            c1[i] = cmax+np.fmod(c0[i]-cmax,2*pi)
-
-        shift = id0-int(round(np.average(c1, weights=w0))/dx)) # weigted average of the Gaussian centers
+            ctemp = np.array([c0[i]-cmax,c0[i]-cmax+2*np.pi,c0[i]-cmax-2*np.pi])
+            c1[i] = cmax+ctemp[np.argmin(np.fabs(ctemp))]
+        
+        shift = int(id0-int(round(np.average(c1, weights=w0)/dx))-np.floor(nx/2)) # weigted average of the Gaussian centers
 
 # roll the array
 
-    if n1>1:
-        alignInt = np.roll(intensity, shift, axis=1)
-    else:
-        alignInt = np.roll(intensity, shift)
+#if n1>1:
+    alignInt = np.roll(intensity, shift, axis=1)
+#else:
+#        alignInt = np.roll(intensity, shift)
 
 # return the variables
 

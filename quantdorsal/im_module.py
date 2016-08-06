@@ -1,4 +1,20 @@
 #===========================================================================================================================================================================
+#Module description
+#===========================================================================================================================================================================
+
+"""QuantDorsal module for image analysis. 
+
+Contains functions for 
+
+	* bioformats images and meta data
+	* reading tiff files
+	* otsu threshholding
+	* ellipse fitting
+	* maximum intensity projection
+
+"""
+
+#===========================================================================================================================================================================
 #Importing necessary modules
 #===========================================================================================================================================================================
 
@@ -343,6 +359,25 @@ def decodeEllipse(ell):
 	return center,lengths,rot
 
 def ellipseToArray(center,lengths,alpha,steps=200):
+	
+	"""Return x/y vector given the center,lengths and rotation of 
+	an ellipse.
+	
+	Args:
+		center (list): Center of ellipse.
+		lengths (list): Lengths of ellipse.
+		alpha (float): Rotation angle of ellipse.
+	
+	Keyword Args:
+		steps (int): Number of x/y points returned.
+		
+	Returns:
+		tuple: Tuple containing:
+			
+			* x (numpy.ndarray): x-coordinates.
+			* y (numpy.ndarray): y-coordinates.
+			
+	"""
 	
 	t=np.linspace(-np.pi,np.pi,steps)
 	

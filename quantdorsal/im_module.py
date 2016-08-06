@@ -5,6 +5,7 @@
 #Numpy/Scipy
 import numpy as np
 from numpy.linalg import eig, inv
+from scipy.optimize import curve_fit # for fitting gaussian
 
 #Scikit image
 import skimage.io
@@ -352,5 +353,108 @@ def ellipseToArray(center,lengths,alpha,steps=200):
 	y=center[1]+a*np.cos(t)*np.sin(alpha)+b*np.sin(t)*np.cos(alpha)
 	
 	return x,y
+
+def multGauss(x, *params):
+    
+    """ function of multiple gaussian distribution 
+        
+        check: http://stackoverflow.com/questions/26902283/fit-multiple-gaussians-to-the-data-in-python
+    """
+    
+    y = np.zeros_like(x)
+    for i in range(0, len(params), 3):
+        ctr = params[i]
+        amp = params[i+1]
+        wid = params[i+2]
+        y = y + amp * np.exp( -((np.amin([x - ctr,x - ctr+2*pi,x - ctr-2*pi]))/wid)**2)
+    return y
 	
-	
+def alignDorsal(x,intensity,dorsal=0,phase=0,method='maxIntensity',opt=None):
+
+    """align the dorsal ventral intensity data with the ventral at 'phase'
+
+    Args: 
+        x (numpy.array): 1D-array of angles corresponding to the intensity data
+        intensity (numpy.array): 2D-array of intensity data for different channels (with the first row the dorsal signal)
+        
+    Keyword Args:
+        dorsal (int): indicates the row of dorsal signal in 'intensity'
+        phase (double): The phase in [-pi,pi] that the ventral center shift to
+        method (str): different methods to determine the ventral center
+            'maxIntensity': pick out the ventral center with the point with maximal dorsal signal;
+            'UI': user indicated point, use 'opt' to indicate the position;
+            'Illastik': indicated by Illastik, use 'opt' to indicate the position;
+            'Gaussian': fit the profile with Gaussian distributions, the center is indicated by the mean of the Gaussian fit, use 'opt' to indicates how many number of Gaussian distribution to fit.
+        opt (double or int): see method for using
+        
+    Returns:
+        tuple: Tuple containing:
+            
+            * phi (numpy.array): phase from -pi to pi
+            * alignInt (numpy.array): aligned intensity
+            
+    """
+
+# size of the data
+
+    nx = x.size
+    n1,n2 = intensity.shape # n1 for number of colors, n2 resolution
+    dx = x[2]-x[1]  # inteval
+    phi = dx*(np.arange(nx)-floor(nx/2))  # odd number of data points, 0 at center, even number, 0 at nx/2
+    id0 = mod(floor((nx-1)/2)+int(round(phase/dx)),nx)  # the position of the peak
+
+# find the dorsal intensity
+
+    dosInt = intensity[dorsal,:]
+
+# find the center with different methods
+
+    if method=='maxIntensity':
+    
+        shift = id0-np.argmax(dosInt)
+    
+    # elif method=='UI':  due to Alex
+
+    elif method=='Illastik':
+    
+        if opt==None:
+            opt = 0     # not indicated
+        
+        shift = id0-np.argmin(np.absolute(x-opt))
+
+    elif method=='Gaussian':
+        
+        if opt==None:
+            opt = 1     # fit with one Gaussian peak
+    
+        guess = [0,np.amax(dosInt),1]
+        if opt>1:
+            for i in range(1,opt):
+                guess += [i*2*pi/opt-pi,np.amax(dosInt)/2,1]
+        
+        popt, pcov = curve_fit(multGauss, x, dosInt, p0=guess)
+        
+        c0 = np.array(popt[0:3:])
+        w0 = np.array(popt[1:3:])
+        cmax = c0(np.argmax(w0))   # center of the strongest peak
+        while cmax>pi:    # addjust to -pi to pi
+            cmax = cmax-2*pi
+        while cmax<-pi:
+            cmax = cmax+2*pi
+                    
+        c1 = np.zeros_like(c0)
+        for i in range(opt):
+            c1[i] = cmax+np.fmod(c0[i]-cmax,2*pi)
+
+        shift = id0-int(round(np.average(c1, weights=w0))/dx)) # weigted average of the Gaussian centers
+
+# roll the array
+
+    if n1>1:
+        alignInt = np.roll(intensity, shift, axis=1)
+    else:
+        alignInt = np.roll(intensity, shift)
+
+# return the variables
+
+    return phi, alignInt

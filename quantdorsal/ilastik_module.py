@@ -36,20 +36,28 @@ from term_module import *
 #Module Functions
 #===========================================================================================================================================================================
 
-
-def runIlastik(fnImg,fnOut,classFile="classifiers/quantDorsalDefault.ilp"):
+def runIlastik(fnImg,fnOut,classFile="classifiers/quantDorsalDefault.ilp",exportImg=False):
 	
 	ilastikPath=getIlastikBin()
 	
 	
-	cmd = ""
-
+	cmd = ilastikPath + " --headless" + " --project=" +classFile + ' --raw_data '+ fnImg 
+	
+	if exportImg:
+		cmd = cmd + "--export_object_prediction_img --export_object_probability_img  "
+	
+	cmd = cmd + "--output_internal_path " + fnOut
+	
+	ret=os.system(cmd)
+	
+	return ret
+	
 def getConfDir():
 	
 	"""Returns path to configurations directory."""
 	
 	modulePath=os.path.dirname(os.path.abspath(inspect.getfile(inspect.currentframe())))
-	path=modulePath+"configurations"+"/"
+	path=modulePath+"/configurations"+"/"
 	return path
 
 def getPathFile():

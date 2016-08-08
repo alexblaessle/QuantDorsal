@@ -7,6 +7,7 @@
 import im_module as im
 import numpy as np
 import sys
+import os
 import matplotlib.pyplot as plt
 import matplotlib.patches as ptc
 import skimage.measure
@@ -18,6 +19,12 @@ fnIn=sys.argv[1]
 #Load bioformats image data
 images,meta=im.readBioFormats(fnIn)
 
+prefix=os.path.basename(fnIn).replace(".lif","")
+fnOut=os.path.dirname(fnIn)+"/tifs/"
+
+im.saveStack(fnOut,images,prefix=prefix)
+
+raw_input()
 
 for img in images:
 	

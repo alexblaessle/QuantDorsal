@@ -36,7 +36,8 @@ import sys
 #Matplotlib
 import matplotlib.pyplot as plt
 
-
+#QuantDorsal
+from term_module import *
 
 #===========================================================================================================================================================================
 #Module Functions
@@ -162,22 +163,45 @@ def saveStack(fnOut,images,prefix=""):
 	filesWritten=[]
 	
 	#Loop through all datasetsm channels and zstacks
-	for i in range(images.shape[0]):
-		for j in range(images.shape[1]):
-			for k in range(images.shape[2]):
+	for i in range(len(images)):
+		for j in range(images[i].shape[0]):
+			for k in range(images[i].shape[1]):
 				
-				fnSave=prefix+"_series"+getEnumStr(i)+"_c"+getEnumStr(j)+"_z"+getEnumStr(k)+".tif"
-				saveImg(images[i,j,k,:,:],fnSave,scale=False)
 				
-
+				
+				fnSave=fnOut+prefix+"_series"+getEnumStr(i,len(images))+"_c"+getEnumStr(j,images[i].shape[0])+"_z"+getEnumStr(k,images[i].shape[1])+".tif"
+				saveImg(images[i][j,k,:,:],fnSave,scale=False)
+				
+				filesWritten.append(fnSave)
+				
+	return filesWritten
+				
 
 def getEnumStr(num,maxNum,L=None):
 	
 	"""Returns enumeration string.
+	
+	Example:
+	
+	>>> getEnumStr(3,125)
+	>>> "003"
+	>>> getEnumStr(3,125,L=4)
+	>>> "0003"
+	
+	Args:
+		num (int): Number.
+		maxNum (int): Largest number in enumeration.
+	
+	Keyword Args:
+		L (int): Force length of string to L.
+		
+	Returns:
+		str: Enumeration string.
+	
 	"""
 	
 	if L==None:
-		L=len(maxNum)
+		L=len(str(maxNum))
 	
 	enumStr=(L-len(str(num)))*"0"+str(num)
 	
@@ -273,7 +297,23 @@ def readBioFormats(fn,debug=True):
 
 def checkProblematicStacks(reader,meta,imageIdx,debug=True):
 	
-	"""Finds stacks that are somehow corrupted."""
+	"""Finds stacks that are somehow corrupted.
+	
+	Does this by trying to read them via ``bioformats.reader.read``, and in case of 
+	exceptions just adds them to a list of problematic stacks.
+	
+	Args:
+		reader (bioformats.reader): A reader object.
+		meta (OMEXML): Bioformats meta data object.
+		imageIdx (int): Index of series to check.
+		
+	Keyword Args:
+		debug (bool): Print debugging messages.
+	
+	Returns:
+		list: List of indices of zstacks that are corrupted.
+	
+	"""
 		
 	problematicStacks=[]
 	
@@ -284,6 +324,7 @@ def checkProblematicStacks(reader,meta,imageIdx,debug=True):
 				img=reader.read(series=imageIdx, c=j, z=k, rescale=False)
 			except:
 				if debug:
+					printWarning("Loading failed.")
 					print "Cannot load Image ", imageIdx,"/",meta.image_count
 					print "channel = ",j, "/",meta.image(imageIdx).Pixels.SizeC
 					print "zStack = ",k,"/",meta.image(imageIdx).Pixels.SizeZ
@@ -602,9 +643,9 @@ def alignDorsal(x,intensity,dorsal=0,phase=0,method='maxIntensity',opt=None):
     
 		c1 = np.zeros_like(c0)
 		for i in range(opt):
-		ctemp = np.array([c0[i]-cmax,c0[i]-cmax+2*np.pi,c0[i]-cmax-2*np.pi])
-		c1[i] = cmax+ctemp[np.argmin(np.fabs(ctemp))]
-        
+			ctemp = np.array([c0[i]-cmax,c0[i]-cmax+2*np.pi,c0[i]-cmax-2*np.pi])
+			c1[i] = cmax+ctemp[np.argmin(np.fabs(ctemp))]
+		
 		shift = int(id0-int(round(np.average(c1, weights=w0)/dx))-np.floor(nx/2)) # weigted average of the Gaussian centers
 
 	# roll the array

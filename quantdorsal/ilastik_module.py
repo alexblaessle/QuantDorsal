@@ -36,17 +36,44 @@ from term_module import *
 #Module Functions
 #===========================================================================================================================================================================
 
-def runIlastik(fnImg,fnOut,classFile="classifiers/quantDorsalDefault.ilp",exportImg=False):
+def runIlastik(fnRawFolder,fnOut,classFile="classifiers/quantDorsalDefault.ilp",channel=0,exportImg=False):
+	
+	"""Runs ilastik on all files in specific folder.
+	
+	Calls ilastik in headless mode using ``os.system``.
+	
+	Args:
+		fnRawFolder (str): Folder containing raw tiff files.
+		fnOut (str): Folder where to put output.
+	
+	Keyword Args:
+		classFile (str): Path to classifier file.
+		channel (int): Which channel to mask.
+		exportImg (bool): Export prediction images.
+		
+	Returns:
+		bool: True if success.
+		
+	"""
 	
 	ilastikPath=getIlastikBin()
 	
-	
-	cmd = ilastikPath + " --headless" + " --project=" +classFile + ' --raw_data '+ fnImg 
+	run_ilastik.sh --headless --project=classifiers/Dorsal_Dapi_alex2.ilp "../data/tifs/*_c0*.tif"
+
+	regExData='"'+fnRawFolder+"*_c"+str(channel) +"*.tif"+'"'
+	#+ ' --raw_data '
+
+	cmd = ilastikPath + " --headless" + " --project=" +classFile 
 	
 	if exportImg:
-		cmd = cmd + "--export_object_prediction_img --export_object_probability_img  "
+		cmd = cmd + " --export_object_prediction_img --export_object_probability_img  "
 	
-	cmd = cmd + "--output_internal_path " + fnOut
+	cmd = cmd + " --output_internal_path " + fnOut
+	
+	cmd=cmd+" " + regExData
+	
+	printNote("About to execute:")
+	print cmd
 	
 	ret=os.system(cmd)
 	
@@ -116,3 +143,59 @@ def getPath(identifier,fnPath=None):
 	
 	return path
 
+def getCenterOfMass(x,y,masses=None):
+	
+	r"""Computes center of mass of a given set of points.
+	
+	.. note:: If ``masses==None``, then all points are assigned :math:`m_i=1`.
+	
+	Center of mass is computed by:
+	
+	.. math:: C=\frac{1}{M}\sum\limits_i m_i (x_i,y_i)^T
+	
+	where 
+	
+	.. math:: M = \sum\limits_i m_i
+	
+	Args:
+		x (numpy.ndarray): x-coordinates.
+		y (numpy.ndarray): y-coordinates.
+		
+	Keyword Args:
+		masses (numpy.ndarray): List of masses.
+	
+	Returns:
+		numpy.ndarray: Center of mass.
+	
+	"""
+	
+	if masses==None:
+		masses=np.ones(x.shape)
+		
+	centerOfMassX=1/(sum(massses))*sum(masses*x)
+	centerOfMassY=1/(sum(massses))*sum(masses*y)
+	
+	centerOfMass=np.array([centerOfMassX,centerOfMassY])
+	
+	return centerOfMass
+	
+def readH5(fn):	
+	
+	"""Reads h5fs data file.
+	
+	Args:
+		fn (str): Path to h5 file.
+	
+	Returns:
+		
+	
+	"""
+	
+	
+	with h5py.File('data.h5','r') as hf:
+		print('List of arrays in this file: \n', hf.keys())
+		data = hf.get('dataset_1')
+		np_data = np.array(data)
+		print('Shape of the array dataset_1: \n', np_data.shape)
+		
+	return data	

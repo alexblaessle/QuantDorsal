@@ -1,3 +1,7 @@
 # Don't push data
 data/
+quantdorsal/classifiers/trainDataSet/
+quantdorsal/classifiers/temp/
+
+
 

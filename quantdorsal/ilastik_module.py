@@ -21,6 +21,9 @@ Contains functions for
 #Numpy/Scipy
 import numpy as np
 
+#Pythonic interface to HDF5
+import h5py
+
 #System
 import sys
 import inspect
@@ -58,7 +61,7 @@ def runIlastik(fnRawFolder,fnOut,classFile="classifiers/quantDorsalDefault.ilp",
 	
 	ilastikPath=getIlastikBin()
 	
-	run_ilastik.sh --headless --project=classifiers/Dorsal_Dapi_alex2.ilp "../data/tifs/*_c0*.tif"
+	#run_ilastik.sh --headless --project=classifiers/Dorsal_Dapi_alex2.ilp "../data/tifs/*_c0*.tif"
 
 	regExData='"'+fnRawFolder+"*_c"+str(channel) +"*.tif"+'"'
 	#+ ' --raw_data '
@@ -179,23 +182,41 @@ def getCenterOfMass(x,y,masses=None):
 	
 	return centerOfMass
 	
-def readH5(fn):	
-	
-	"""Reads h5fs data file.
-	
-	Args:
-		fn (str): Path to h5 file.
-	
-	Returns:
-		
-	
-	"""
-	
-	
-	with h5py.File('data.h5','r') as hf:
-		print('List of arrays in this file: \n', hf.keys())
-		data = hf.get('dataset_1')
-		np_data = np.array(data)
-		print('Shape of the array dataset_1: \n', np_data.shape)
-		
-	return data	
+
+def readH5(fn):
+    
+    """ Reads HDF5 data file
+    
+    Args:
+        fn (str): Path to h5 file
+        
+    Returns:
+        np_data: numpy array containing trained probabilities
+        [z-stack, y-coord, x-coord,(0=background, 1=foreground)]
+    """
+    
+    with h5py.File(fn,'r') as hf:
+        print('List of arrays in this file: \n', hf.keys())
+        data = hf.get(hf.keys()[0])
+        np_data = np.array(data)
+        print('Shape of the array: \n', np_data.shape)
+    
+    return np_data
+
+def makeProbMask(array):
+    
+    """ Makes a mask from the trained probabilities
+    
+    Args:
+        array (nparray): probability data
+        
+    Returns:
+        mask (nparray): mask
+    """
+    prob = np.copy(array)
+    mask=np.zeros(prob.shape)
+    mask[np.where(prob>0.9)]=1
+    
+    return mask
+    
+    

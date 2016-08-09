@@ -23,6 +23,11 @@ import numpy as np
 import sys
 import inspect
 import os
+import subprocess
+import shlex
+
+#H5
+import h5py
 
 #Matplotlib
 import matplotlib.pyplot as plt
@@ -73,10 +78,9 @@ def runIlastik(files,fnOut=None,classFile="classifiers/quantDorsalDefault.ilp",c
 		
 		if fnOut!=None:
 			cmd = cmd + " --output_internal_path " + fnOut
-		else:
-			fnOut=fn
-		
-		outFiles.append(fnOut)
+			outFiles.append(fnOut)
+		else: 
+			outFiles.append(fn.replace(".tif","_Probabilities.h5"))
 		
 		#Add input data to command string
 		cmd=cmd+" " + regExData
@@ -86,9 +90,29 @@ def runIlastik(files,fnOut=None,classFile="classifiers/quantDorsalDefault.ilp",c
 		print cmd
 		
 		#Run command
-		ret=os.system(cmd)
+		runCommand(cmd,fnStout=fn.replace(".tif",".stout"),fnSterr=fn.replace(".tif",".sterr"))
 	
 	return outFiles
+
+def runCommand(cmd,fnStout="stout.txt",fnSterr="sterr",redirect=True):
+	
+	#Split command in list for subprocess
+	args = shlex.split(cmd)
+	
+	#redirect stdout and stderr if selected
+	if redirect:
+		stoutFile = open(fnStout,'wb')
+		sterrFile = open(fnSterr,'wb')
+	else:	
+		stoutFile = None
+		sterrFile = None
+		
+	#Call via subprocess and wait till its done
+	p = subprocess.Popen(args,stdout=stoutFile,stderr=sterrFile)
+	p.wait()
+	
+	return 
+	
 	
 def getConfDir():
 	
@@ -154,43 +178,6 @@ def getPath(identifier,fnPath=None):
 	
 	return path
 
-def getCenterOfMass(x,y,masses=None):
-	
-	r"""Computes center of mass of a given set of points.
-	
-	.. note:: If ``masses==None``, then all points are assigned :math:`m_i=1`.
-	
-	Center of mass is computed by:
-	
-	.. math:: C=\frac{1}{M}\sum\limits_i m_i (x_i,y_i)^T
-	
-	where 
-	
-	.. math:: M = \sum\limits_i m_i
-	
-	Args:
-		x (numpy.ndarray): x-coordinates.
-		y (numpy.ndarray): y-coordinates.
-		
-	Keyword Args:
-		masses (numpy.ndarray): List of masses.
-	
-	Returns:
-		numpy.ndarray: Center of mass.
-	
-	"""
-	
-	if masses==None:
-		masses=np.ones(x.shape)
-		
-	centerOfMassX=1/(sum(massses))*sum(masses*x)
-	centerOfMassY=1/(sum(massses))*sum(masses*y)
-	
-	centerOfMass=np.array([centerOfMassX,centerOfMassY])
-	
-	return centerOfMass
-
-
 def readH5(fn):
     
 	""" Reads HDF5 data file
@@ -211,18 +198,22 @@ def readH5(fn):
 	
 	return np_data
 
-def makeProbMask(array):
+def makeProbMask(array,thresh=0.8):
     
 	""" Makes a mask from the trained probabilities
 	
 	Args:
 		array (nparray): probability data
 		
+	Keyword Args:
+		thresh (float): Threshhold.
+		
 	Returns:
 		mask (nparray): mask
 	"""
 	prob = np.copy(array)
 	mask=np.zeros(prob.shape)
-	mask[np.where(prob>0.9)]=1
+	mask[np.where(prob>thresh)]=1
 	
 	return mask
+

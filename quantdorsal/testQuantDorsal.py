@@ -31,9 +31,17 @@ images,meta=im.readBioFormats(fnIn)
 #Save stacks to tifs
 prefix=os.path.basename(fnIn).replace(".zip.lif","")
 fnOut=os.path.dirname(fnIn)+"/tifs/"
+
 tifFiles=im.saveImageSeriesToStacks(images,fnOut,prefix=prefix,axes='ZYX',channel=0,debug=True)
 
 #Run ilastik
+
+print tifFiles
+tifFiles=tifFiles[0:2]
+print tifFiles
+
+
+
 probFiles=ilm.runIlastik(tifFiles,classFile="classifiers/Dorsal_Dapi_alex3.ilp")
 
 #Threshhold

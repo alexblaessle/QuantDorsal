@@ -6,12 +6,10 @@
 
 Contains functions for 
 
-	* bioformats images and meta data
-	* reading tiff files
-	* otsu threshholding
-	* ellipse fitting
-	* maximum intensity projection
-
+	* Launching ilastik.
+	* Path management.
+	* h5 I/O.
+	
 """
 
 #===========================================================================================================================================================================
@@ -20,9 +18,6 @@ Contains functions for
 
 #Numpy/Scipy
 import numpy as np
-
-#Pythonic interface to HDF5
-import h5py
 
 #System
 import sys
@@ -39,48 +34,61 @@ from term_module import *
 #Module Functions
 #===========================================================================================================================================================================
 
-def runIlastik(fnRawFolder,fnOut,classFile="classifiers/quantDorsalDefault.ilp",channel=0,exportImg=False):
+def runIlastik(files,fnOut=None,classFile="classifiers/quantDorsalDefault.ilp",channel=0,exportImg=False):
 	
-	"""Runs ilastik on all files in specific folder.
+	"""Runs ilastik on all files in specified in files.
 	
 	Calls ilastik in headless mode using ``os.system``.
 	
 	Args:
-		fnRawFolder (str): Folder containing raw tiff files.
-		fnOut (str): Folder where to put output.
-	
+		files (str): List of files to run ilastik on.
+		
 	Keyword Args:
 		classFile (str): Path to classifier file.
 		channel (int): Which channel to mask.
 		exportImg (bool): Export prediction images.
+		fnOut (str): Output filepath
 		
 	Returns:
-		bool: True if success.
+		list: List of paths to output files.
 		
 	"""
 	
+	#Get ilastik binary
 	ilastikPath=getIlastikBin()
 	
-	#run_ilastik.sh --headless --project=classifiers/Dorsal_Dapi_alex2.ilp "../data/tifs/*_c0*.tif"
-
-	regExData='"'+fnRawFolder+"*_c"+str(channel) +"*.tif"+'"'
-	#+ ' --raw_data '
-
-	cmd = ilastikPath + " --headless" + " --project=" +classFile 
+	outFiles=[]
 	
-	if exportImg:
-		cmd = cmd + " --export_object_prediction_img --export_object_probability_img  "
+	for fn in files:
 	
-	cmd = cmd + " --output_internal_path " + fnOut
+		#Build input data string
+		regExData=" " + fn + " " 
+		
+		#Build basic command
+		cmd = ilastikPath + " --headless" + " --project=" +classFile 
+		
+		#Some extra options for output
+		if exportImg:
+			cmd = cmd + " --export_object_prediction_img --export_object_probability_img  "
+		
+		if fnOut!=None:
+			cmd = cmd + " --output_internal_path " + fnOut
+		else:
+			fnOut=fn
+		
+		outFiles.append(fnOut)
+		
+		#Add input data to command string
+		cmd=cmd+" " + regExData
+		
+		#Print what we are about to do
+		printNote("About to execute:")
+		print cmd
+		
+		#Run command
+		ret=os.system(cmd)
 	
-	cmd=cmd+" " + regExData
-	
-	printNote("About to execute:")
-	print cmd
-	
-	ret=os.system(cmd)
-	
-	return ret
+	return outFiles
 	
 def getConfDir():
 	
@@ -181,42 +189,40 @@ def getCenterOfMass(x,y,masses=None):
 	centerOfMass=np.array([centerOfMassX,centerOfMassY])
 	
 	return centerOfMass
-	
+
 
 def readH5(fn):
     
-    """ Reads HDF5 data file
+	""" Reads HDF5 data file
+	
+	Args:
+		fn (str): Path to h5 file
+		
+	Returns:
+		np_data: numpy array containing trained probabilities
+		[z-stack, y-coord, x-coord,(0=background, 1=foreground)]
+	"""
     
-    Args:
-        fn (str): Path to h5 file
-        
-    Returns:
-        np_data: numpy array containing trained probabilities
-        [z-stack, y-coord, x-coord,(0=background, 1=foreground)]
-    """
-    
-    with h5py.File(fn,'r') as hf:
-        print('List of arrays in this file: \n', hf.keys())
-        data = hf.get(hf.keys()[0])
-        np_data = np.array(data)
-        print('Shape of the array: \n', np_data.shape)
-    
-    return np_data
+	with h5py.File(fn,'r') as hf:
+		print('List of arrays in this file: \n', hf.keys())
+		data = hf.get(hf.keys()[0])
+		np_data = np.array(data)
+		print('Shape of the array: \n', np_data.shape)
+	
+	return np_data
 
 def makeProbMask(array):
     
-    """ Makes a mask from the trained probabilities
-    
-    Args:
-        array (nparray): probability data
-        
-    Returns:
-        mask (nparray): mask
-    """
-    prob = np.copy(array)
-    mask=np.zeros(prob.shape)
-    mask[np.where(prob>0.9)]=1
-    
-    return mask
-    
-    
+	""" Makes a mask from the trained probabilities
+	
+	Args:
+		array (nparray): probability data
+		
+	Returns:
+		mask (nparray): mask
+	"""
+	prob = np.copy(array)
+	mask=np.zeros(prob.shape)
+	mask[np.where(prob>0.9)]=1
+	
+	return mask

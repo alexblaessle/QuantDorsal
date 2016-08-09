@@ -25,7 +25,8 @@ from scipy.optimize import curve_fit # for fitting gaussian
 
 #Scikit image
 import skimage.io
-
+import tifffile
+	
 #Bioformats
 import javabridge
 import bioformats
@@ -90,63 +91,77 @@ def saveImg(img,fn,enc="uint16",scale=True,maxVal=None):
 	img=np.nan_to_num(img)
 	
 	#Scale img
-	img=scaleToEnc(img,enc,maxVal=maxVal)
+	if scale:
+		img=scaleToEnc(img,enc,maxVal=maxVal)
 	skimage.io.imsave(fn,img)
 	
 	return fn
 
-def scaleToEnc(img,enc,maxVal=None):
+def saveSingleStackFile(img,fn,axes='ZYX'):
 	
-	"""Scales image to either the maximum
-	range of encoding or ``maxVal``.
+	"""Saves a stack to a single tiff file.
 	
-	Possible encodings: 
-	
-		* 4bit
-		* 8bit
-		* 16bit
-		* 32bit
+	Uses ``tifffile``.
 	
 	Args:
-		img (numpy.ndarray): Image to save.
-		enc (str): Encoding of image.
-		
-	Keyword Args:	
-		maxVal (int): Maximum value to which image is scaled.
+		img (numpy.ndarray): Image data.
+		fn (str): Filepath.
 	
+	Keyword Args:
+		axes (str): Axes specification.
+		
 	Returns:
-		numpy.ndarray: Scaled image.
+		str: Output filename.
 	
 	"""
 	
-	#Get maximum intensity of encoding
-	if "16" in enc:
-		maxValEnc=2**16-1
-	elif "8" in enc:
-		maxValEnc=2**8-1
-	elif "4" in enc:
-		maxValEnc=2**4-1
-	elif "32" in enc:
-		maxValEnc=2**32-1
+	#Define metadata
+	metadata={'axes': axes}
+	tifffile.imsave(fn, img, metadata=metadata)
 	
-	#See if maxVal is greater than maxValEnc
-	if maxVal!=None:
-		maxVal=min([maxVal,maxValEnc])
-	else:
-		maxVal=maxValEnc
+	return fn
+
+def saveImageSeriesToStacks(images,fnFolder,prefix="",axes='ZYX',channel=0,debug=True):
+	
+	"""Writes list of images into single stack tiff files.
+	
+	Args:
+		fnFolder (str): Folder to write to.
+		images (list): List of stacks.
 		
-	#Scale image
-	factor=maxVal/img.max()
-	img=img*factor
-
-	#Convert to encoding
-	img=img.astype(enc)
+	Keyword Args:
+		prefix (str): Prefix to be put in the front of the filename.
+		channel (int): Which channel to write.
+		debug (bool): Print debugging messages.
 	
-	return img
-
-def saveStack(fnOut,images,prefix=""):
+	Returns:
+		list: List of all the filesnames written.
 	
-	"""Writes stack to tiff files.
+	"""
+	
+	filesWritten=[]
+	
+	#Loop through all image series
+	for i,img in enumerate(images):
+		
+		#Build save string
+		fnSave=fnFolder+prefix+"_series"+getEnumStr(i,len(images))+"_c"+getEnumStr(channel,img.shape[0])+".tif"
+		
+		#Save to stack
+		saveSingleStackFile(img[channel],fnSave,axes=axes)
+		
+		#Print out message
+		if debug:
+			print "Successfully wrote file "+ fnSave
+		
+		#Remeber filename
+		filesWritten.append(fnSave)
+	
+	return filesWritten
+			
+def saveStackToFiles(fnOut,images,prefix=""):
+	
+	"""Writes stack to a list of tiff files.
 	
 	Args:
 		fnOut (str): Folder to write to.
@@ -658,3 +673,55 @@ def alignDorsal(x,intensity,dorsal=0,phase=0,method='maxIntensity',opt=None):
 	# return the variables
 
 	return phi, alignInt
+
+
+
+
+def scaleToEnc(img,enc,maxVal=None):
+	
+	"""Scales image to either the maximum
+	range of encoding or ``maxVal``.
+	
+	Possible encodings: 
+	
+		* 4bit
+		* 8bit
+		* 16bit
+		* 32bit
+	
+	Args:
+		img (numpy.ndarray): Image to save.
+		enc (str): Encoding of image.
+		
+	Keyword Args:	
+		maxVal (int): Maximum value to which image is scaled.
+	
+	Returns:
+		numpy.ndarray: Scaled image.
+	
+	"""
+	
+	#Get maximum intensity of encoding
+	if "16" in enc:
+		maxValEnc=2**16-1
+	elif "8" in enc:
+		maxValEnc=2**8-1
+	elif "4" in enc:
+		maxValEnc=2**4-1
+	elif "32" in enc:
+		maxValEnc=2**32-1
+	
+	#See if maxVal is greater than maxValEnc
+	if maxVal!=None:
+		maxVal=min([maxVal,maxValEnc])
+	else:
+		maxVal=maxValEnc
+		
+	#Scale image
+	factor=maxVal/img.max()
+	img=img*factor
+
+	#Convert to encoding
+	img=img.astype(enc)
+	
+	return img

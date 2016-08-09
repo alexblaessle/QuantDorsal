@@ -2,6 +2,15 @@
 data/
 quantdorsal/classifiers/trainDataSet/
 quantdorsal/classifiers/temp/
+quantdorsal/classifiers/
+
+# Don't push compiled files
+quantdorsal/*pyc
+
+# Don't push weird files
+.DS_Store
+
+
 
 
 

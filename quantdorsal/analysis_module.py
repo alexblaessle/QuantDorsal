@@ -164,10 +164,16 @@ def invEllipse(x,y,center,lengths,alpha):
 	X=(y-center[1])
 	Y=(x-center[0])
 	
-	x1=(Y*np.cos(alpha)-X*np.sin(alpha))*lengths[0]
-	x2=(Y*np.sin(alpha)+X*np.cos(alpha))*lengths[1]
-
-	t=np.arctan2(x1,x2)
+	#Turn back using inverse rotation matrix
+	XRot=(Y*np.cos(alpha)-X*np.sin(alpha))
+	YRot=(Y*np.sin(alpha)+X*np.cos(alpha))
+	
+	#Multiply with a/b
+	XRot=XRot*lengths[0]
+	YRot=YRot*lengths[1]
+	
+	#Compute angle using tan^-1
+	t=np.arctan2(XRot,YRot)
 	
 	return t
 

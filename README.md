@@ -5,9 +5,7 @@ Quant Dorsal
 
 ## TODO
 
-- segmentation train, ilastik    ==> generate .ilp file
-- python input/output to ilastik  ==> runIlastik(fn,classifier Path to batch process the data in) 							  ilastik via command line )
-- applySegmentation(images,prediction)
+
 - Ellipse fitting
 	+ get nuclei centre (dapiChannel*prediction)
 	+ test on data

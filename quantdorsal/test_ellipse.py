@@ -5,7 +5,7 @@ import analysis_module as am
 import matplotlib.pyplot as plt
 
 #Define ellipse
-alpha=30.
+alpha=0.5*np.pi
 a=5
 b=3
 x0=5

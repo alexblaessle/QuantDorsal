@@ -213,9 +213,21 @@ def makeProbMask(array,thresh=0.8,debug=False):
 	mask=np.zeros(prob.shape)
 	mask[np.where(prob>thresh)]=1
 	
-	
-		
-	
-	
 	return mask
 
+def getH5FilesFromFolder(fn):
+	
+	files=os.listdir(fn)
+	
+	newFiles=[]
+	for f in files:
+		print f
+		if f.endswith(".h5"):
+			newFiles.append(fn+f)
+	
+	print newFiles
+	
+	return newFiles.sort()		
+	
+	
+	

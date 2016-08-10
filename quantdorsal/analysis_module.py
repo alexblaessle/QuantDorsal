@@ -245,9 +245,9 @@ def fitEllipseToMask(mask):
 	ell=fitEllipse(x,y)
 	center,lengths,rot=decodeEllipse(ell)
 	
-	x,y=ellipseToArray(center,lengths,rot,steps=200)
+	xEll,yEll=ellipseToArray(center,lengths,rot,steps=200)
 	
-	return center, lengths, rot,x,y
+	return center, lengths, rot,x,y,xEll,yEll
 
 def createSignalProfileFromH5(img,fn,signalChannel=2,probThresh=0.8,probIdx=0,maxInt=False,hist=False,bins=20,maskBkgd=False,bkgd=5.,debug=False):
 	
@@ -341,13 +341,13 @@ def createSignalProfile(maskedImg,mask,img,signalChannel=1,maxInt=False,hist=Fal
 	for i in range(mask.shape[0]):
 		
 		#Fit ellipse
-		center,lengths,rot,x,y=fitEllipseToMask(mask[i])
+		center,lengths,rot,x,y,xEll,yEll=fitEllipseToMask(mask[i])
 		
 		#Get values of signal in shape of x,y
 		signal=maskedImg[i][np.where(mask[i]>0.5)].flatten()
 		
 		#Compute angles
-		t=invEllipse(x,y,center,lengths,rot)	
+		t=invEllipse(x,y,center,lengths,rot)
 		
 		#Sort by angle
 		t,signal=sortByAngle(t,signal)
@@ -359,8 +359,8 @@ def createSignalProfile(maskedImg,mask,img,signalChannel=1,maxInt=False,hist=Fal
 			
 		#Bin if selected
 		if hist:
-			t,signal=simpleHist(t,signal,bins)
-			
+			#t,signal=simpleHist(t,signal,bins)
+			t,signal=binData(t,signal,bins)
 			print len(t), len(signal)	
 	
 		#Append
@@ -368,7 +368,7 @@ def createSignalProfile(maskedImg,mask,img,signalChannel=1,maxInt=False,hist=Fal
 		angles.append(t)
 		
 		if debug:
-			showProfileDebugPlots(img,mask,maskedImg,i,signal,t,x,y,signalChannel,axes=None)
+			showProfileDebugPlots(img,mask,maskedImg,i,signal,t,xEll,yEll,signalChannel,axes=None)
 			
 	return angles,signals	
 
@@ -387,6 +387,8 @@ def showProfileDebugPlots(img,mask,maskedImg,idx,signal,angle,xEll,yEll,channelI
 	axes[1,0].plot(xEll,yEll,'g')
 	axes[2,0].imshow(maskedImg[idx])
 	axes[2,1].plot(angle,signal,'r')
+	#axes[2,1].scatter(xEll,yEll,'r')
+	
 	plt.draw()
 	raw_input()
 	
@@ -453,8 +455,24 @@ def simpleHist(x,y,bins):
 	xBin=np.diff(xBin)+xBin[:-1]
 	
 	return xBin,np.asarray(yBin)		
+
+def binData(x,y,bins):
 		
+	"""Bins data."""	
 	
+	#Bin array
+	bins=np.linspace(x.min(),x.max(),bins)
+
+	#Find idxs
+	idx=np.digitize(x,bins)
+	binMeans = [y[idx == i].mean() for i in range(1, len(bins))]
+	binMeans=np.asarray(binMeans)
+	
+	#Bin 
+	xBin=np.diff(bins)/2.+bins[:-1]
+
+	return xBin,binMeans
+
 def alignDorsal(x,intensity,dorsal=0,phase=0,method='maxIntensity',opt=None):
 
 	"""Align the dorsal ventral intensity data with the ventral at 'phase'.
@@ -484,7 +502,6 @@ def alignDorsal(x,intensity,dorsal=0,phase=0,method='maxIntensity',opt=None):
 	"""
 
 	# size of the data
-
 	nx = x.size
 	n1,n2 = intensity.shape # n1 for number of colors, n2 resolution
 	dx = x[2]-x[1]  # inteval
@@ -492,7 +509,6 @@ def alignDorsal(x,intensity,dorsal=0,phase=0,method='maxIntensity',opt=None):
 	id0 = np.mod(np.floor((nx)/2)+int(round(phase/dx)),nx)  # the position of the peak
 	
 	# find the dorsal intensity
-	
 	dosInt = intensity[dorsal,:]
 	
 	# find the center with different methods

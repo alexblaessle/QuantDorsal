@@ -25,6 +25,9 @@ import matplotlib.pyplot as plt
 
 #QuantDorsal
 from term_module import *
+import ilastik_module as ilm
+import im_module as im
+
 
 #===========================================================================================================================================================================
 #Module Functions
@@ -159,7 +162,24 @@ def ellipseToArray(center,lengths,alpha,steps=200):
 	return x,y
 
 def invEllipse(x,y,center,lengths,alpha):
+		
+	r"""Inverses ellipse in parametric form.
 	
+	Centers ellipse, rotates it back using inverse of rotational 
+	matrix and then computes angle.
+	
+	Args:
+		x (numpy.ndarray): x-coordinates.
+		y (numpy.ndarray): y-coordinates.
+		center (list): Center of ellipse.
+		lengths (list): Lengths of ellipse.
+		alpha (float): Rotation angle of ellipse.
+		
+	Returns:
+		numpy.ndarray: List of angles corresponding to points.
+		
+	"""
+		
 	#Move to center
 	X=(y-center[1])
 	Y=(x-center[0])
@@ -171,7 +191,7 @@ def invEllipse(x,y,center,lengths,alpha):
 	#Multiply with a/b
 	XRot=XRot*lengths[0]
 	YRot=YRot*lengths[1]
-	
+
 	#Compute angle using tan^-1
 	t=np.arctan2(XRot,YRot)
 	
@@ -183,6 +203,350 @@ def maskImg(img,mask,channel):
 	"""
 	
 	img=img[channel]
-	
+		
 	return mask*img
 
+def maskImgFromH5(fn,img,probIdx=0,probThresh=0.8,channel=1):
+	
+	"""Reads h5 files and produces binary mask
+	
+	"""
+	
+	#Load data
+	data=ilm.readH5(fn)
+	
+	#Extract values for right label
+	data=data[:,:,:,probIdx]
+	
+	#Make mask
+	mask=ilm.makeProbMask(data,thresh=probThresh)
+	
+	#Mask img
+	maskedImg=maskImg(img,mask,channel)
+	
+	return mask,maskedImg
+
+def fitEllipseToMask(mask):
+	
+	"""Fits ellipse to mask.
+	
+	"""
+	
+	#Build coordinate grid
+	x=np.arange(mask.shape[1])
+	y=np.arange(mask.shape[0])
+	X,Y=np.meshgrid(x,y)
+
+	#Extract coordinates that are 1
+	x=X[np.where(mask>0.5)].flatten()
+	y=Y[np.where(mask>0.5)].flatten()
+	
+	#Fit ellipse
+	ell=fitEllipse(x,y)
+	center,lengths,rot=decodeEllipse(ell)
+	
+	x,y=ellipseToArray(center,lengths,rot,steps=200)
+	
+	return center, lengths, rot,x,y
+
+def createSignalProfileFromH5(img,fn,signalChannel=2,probThresh=0.8,probIdx=0,maxInt=False,hist=False,bins=20,maskBkgd=False,bkgd=5.,debug=False):
+	
+	"""Builds angular signal distribution using h5 file as input.
+	
+	Does the following:
+	
+		* Reads in h5 file, creates mask.
+		* Masks image.
+		* Fits ellipse to mask.
+		* Creates angular distribution profile.
+	
+	Args:
+		img (numpy.ndarray): Image stack.
+		fn (str): Path to h5 file.
+		
+	Keyword Args:	
+		signalChannel (int): Index of channel with signal.
+		probThresh (float): Probability threshhold used.
+		probIdx (int): Index of which label in h5 file to be used.
+		maxInt (bool): Perform maximum intensity projection of stack.
+		hist (bool): Perform angular binning.
+		bins (int): Number of angular bins.
+		maskBkgd (bool): Mask angular background.
+		bkgd (float): Background intensity.
+		debug (bool): Show debugging plots.
+	
+	Returns:
+		tuple: Tuple containing:
+		
+			* angles (list): List of angle arrays.
+			* signals (list): List of signal arrays.
+	
+	"""
+	
+	#Make mask
+	mask,maskedImg=maskImgFromH5(fn,img,probIdx=probIdx,probThresh=probThresh,channel=signalChannel)
+	
+	##If maximum intensity projection is selected, do so
+	if maxInt:
+		
+		#Perform projection
+		mask=im.maxIntProj(mask,0)
+		maskedImg=im.maxIntProj(maskedImg,0)
+		
+		#Add another axis so we have a fake zstack
+		mask= mask[np.newaxis,:]		
+		maskedImg= maskedImg[np.newaxis,:]
+	
+	#Get signal profile
+	angles,signals=createSignalProfile(maskedImg,mask,img,maxInt=maxInt,hist=hist,bins=bins,maskBkgd=maskBkgd,bkgd=bkgd,debug=debug)
+	
+	return angles,signals
+	
+def createSignalProfile(maskedImg,mask,img,signalChannel=1,maxInt=False,hist=False,bins=20,maskBkgd=False,bkgd=5.,debug=False):
+	
+	"""Builds angular signal distribution given a masked Image and its mask.
+	
+	Does the following:
+		* Fits ellipse to mask.
+		* Creates angular distribution profile.
+	
+	Args:
+		maskedImg (numpy.ndarray): Masked image stack.
+		mask (numpy.ndarray): Mask  stack.
+		img (numpy.ndarray): Image stack.
+		fn (str): Path to h5 file.
+		
+	Keyword Args:	
+		signalChannel (int): Index of channel with signal.
+		probThresh (float): Probability threshhold used.
+		probIdx (int): Index of which label in h5 file to be used.
+		maxInt (bool): Perform maximum intensity projection of stack.
+		hist (bool): Perform angular binning.
+		bins (int): Number of angular bins.
+		maskBkgd (bool): Mask angular background.
+		bkgd (float): Background intensity.
+		debug (bool): Show debugging plots.
+	
+	Returns:
+		tuple: Tuple containing:
+		
+			* angles (list): List of angle arrays.
+			* signals (list): List of signal arrays.
+	
+	"""
+	
+	angles=[]
+	signals=[]
+	
+	for i in range(mask.shape[0]):
+		
+		#Fit ellipse
+		center,lengths,rot,x,y=fitEllipseToMask(mask[i])
+		
+		#Get values of signal in shape of x,y
+		signal=maskedImg[i][np.where(mask[i]>0.5)].flatten()
+		
+		#Compute angles
+		t=invEllipse(x,y,center,lengths,rot)	
+		
+		#Sort by angle
+		t,signal=sortByAngle(t,signal)
+		
+		#If maskZero is selected, pop bkgd intensity 
+		if maskBkgd:
+			t=t[np.where(signal>bkgd)[0]]
+			signal=signal[np.where(signal>bkgd)[0]]
+			
+		#Bin if selected
+		if hist:
+			t,signal=simpleHist(t,signal,bins)
+			
+			print len(t), len(signal)	
+	
+		#Append
+		signals.append(signal)
+		angles.append(t)
+		
+		if debug:
+			showProfileDebugPlots(img,mask,maskedImg,i,signal,t,x,y,signalChannel,axes=None)
+			
+	return angles,signals	
+
+def showProfileDebugPlots(img,mask,maskedImg,idx,signal,angle,xEll,yEll,channelIdx,axes=None):
+	
+	"""Shows some debugging plots."""
+	
+	fig, axes = plt.subplots(3, 2)
+	
+	fig.show()
+	axes[0,0].imshow(img[0,idx])
+	axes[0,0].set_title("Dapi Channel")
+	axes[0,1].imshow(img[1,channelIdx])
+	axes[1,0].imshow(mask[idx])
+	axes[1,1].imshow(maskedImg[idx])
+	axes[1,0].plot(xEll,yEll,'g')
+	axes[2,0].imshow(maskedImg[idx])
+	axes[2,1].plot(angle,signal,'r')
+	plt.draw()
+	raw_input()
+	
+	return axes
+	
+def sortByAngle(angle,signal):
+	
+	"""Sorts angle and signal vector by angle."""
+	
+	idx = angle.argsort()
+	angle = angle[idx[::-1]]
+	signal = signal[idx[::-1]]
+
+	return angle,signal
+
+#def alignSignalProfiles(angles,signals):
+	
+	#anglesAligned=[]
+	#signalsAligned=[]
+	
+	#for i in range(len(angles)):
+		
+		
+def simpleHist(x,y,bins):
+
+	"""Performs a simple histogram onto x-array.
+	
+	Args:
+		x (numpy.ndarray): x coordinates of data
+		y (numpy.ndarray): y coordinates of data
+		bins (int):  number of bins
+	
+	Returns:
+		tuple: Tuple containing:
+		
+			* xBin (numpy.ndarray): Center of bins
+			* yBin (numpy.ndarray): Bin Values
+		
+	"""
+	
+
+	xBin=np.linspace(min(x),max(x),bins+1)
+	
+	print x[0], xBin[0],x[-1],xBin[-1]
+	
+	
+	
+	iLast=0
+	j=1
+	
+	yBin=[]
+	
+	for i,xv in enumerate(x):
+		try:	
+			if xv>=xBin[j]:
+				yBin.append(np.mean(y[iLast:i]))
+				iLast=i
+				j=j+1
+				
+				
+		except IndexError:
+			pass
+
+	xBin=np.diff(xBin)+xBin[:-1]
+	
+	return xBin,np.asarray(yBin)		
+		
+	
+def alignDorsal(x,intensity,dorsal=0,phase=0,method='maxIntensity',opt=None):
+
+    
+	"""Align the dorsal ventral intensity data with the ventral at 'phase'.
+	
+	Args: 
+		x (numpy.array): 1D-array of angles corresponding to the intensity data
+		intensity (numpy.array): 2D-array of intensity data for different channels (with the first row the dorsal signal)
+
+	Keyword Args:
+		dorsal (int): indicates the row of dorsal signal in 'intensity'
+		phase (double): The phase in [-pi,pi] that the ventral center shift to
+		method (str): different methods to determine the ventral center
+		
+			* 'maxIntensity': pick out the ventral center with the point with maximal dorsal signal;
+			* 'UI': user indicated point, use 'opt' to indicate the position;
+			* 'Illastik': indicated by Illastik, use 'opt' to indicate the position;
+			* 'Gaussian': fit the profile with Gaussian distributions, the center is indicated by the mean of the Gaussian fit, use 'opt' to indicates how many number of Gaussian distribution to fit.
+		
+		opt (double or int): see method for using
+		
+	Returns:
+		tuple: Tuple containing:
+		
+			* phi (numpy.array): phase from -pi to pi
+			* alignInt (numpy.array): aligned intensity
+            
+	"""
+
+	# size of the data
+
+	nx = x.size
+	n1,n2 = intensity.shape # n1 for number of colors, n2 resolution
+	dx = x[2]-x[1]  # inteval
+	phi = dx*(np.arange(nx)-np.floor(nx/2))  # odd number of data points, 0 at center, even number, 0 at nx/2
+	id0 = np.mod(np.floor((nx)/2)+int(round(phase/dx)),nx)  # the position of the peak
+	
+	# find the dorsal intensity
+	
+	dosInt = intensity[dorsal,:]
+	
+	# find the center with different methods
+	
+	if method=='maxIntensity':
+		
+		shift = int(id0-np.argmax(dosInt))
+    
+	# elif method=='UI':  due to Alex
+    
+	elif method=='Illastik':
+		
+		if opt==None:
+			opt = 0     # not indicated
+		
+		shift = int(id0-np.argmin(np.absolute(x-opt)))
+
+	elif method=='Gaussian':
+    
+		if opt==None:
+			opt = 1     # fit with one Gaussian peak
+        
+		guess = [0,np.amax(dosInt),1]
+		if opt>1:
+			for i in range(1,opt):
+				guess += [i*2*np.pi/opt-np.pi,np.amax(dosInt)/opt,1]
+        
+		popt, pcov = curve_fit(multGauss, x, dosInt, p0=guess)
+        
+		c0 = np.array(popt[0::3])
+		w0 = np.array(popt[1::3])
+		cmax = c0[np.argmax(w0)]   # center of the strongest peak
+		while cmax>np.pi:    # addjust to -pi to pi
+			cmax = cmax-2*np.pi
+		while cmax<-np.pi:
+			cmax = cmax+2*np.pi
+    
+		c1 = np.zeros_like(c0)
+		for i in range(opt):
+			ctemp = np.array([c0[i]-cmax,c0[i]-cmax+2*np.pi,c0[i]-cmax-2*np.pi])
+			c1[i] = cmax+ctemp[np.argmin(np.fabs(ctemp))]
+		
+		shift = int(id0-int(round(np.average(c1, weights=w0)/dx))-np.floor(nx/2)) # weigted average of the Gaussian centers
+
+	# roll the array
+
+	#if n1>1:
+	alignInt = np.roll(intensity, shift, axis=1)
+	#else:
+	#        alignInt = np.roll(intensity, shift)
+
+	# return the variables
+
+	return phi, alignInt
+	
+	

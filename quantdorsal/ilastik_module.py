@@ -191,14 +191,12 @@ def readH5(fn):
 	"""
     
 	with h5py.File(fn,'r') as hf:
-		print('List of arrays in this file: \n', hf.keys())
 		data = hf.get(hf.keys()[0])
 		np_data = np.array(data)
-		print('Shape of the array: \n', np_data.shape)
-	
+		
 	return np_data
 
-def makeProbMask(array,thresh=0.8):
+def makeProbMask(array,thresh=0.8,debug=False):
     
 	""" Makes a mask from the trained probabilities
 	
@@ -214,6 +212,10 @@ def makeProbMask(array,thresh=0.8):
 	prob = np.copy(array)
 	mask=np.zeros(prob.shape)
 	mask[np.where(prob>thresh)]=1
+	
+	
+		
+	
 	
 	return mask
 

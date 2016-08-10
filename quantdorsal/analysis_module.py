@@ -457,7 +457,6 @@ def simpleHist(x,y,bins):
 	
 def alignDorsal(x,intensity,dorsal=0,phase=0,method='maxIntensity',opt=None):
 
-    
 	"""Align the dorsal ventral intensity data with the ventral at 'phase'.
 	
 	Args: 

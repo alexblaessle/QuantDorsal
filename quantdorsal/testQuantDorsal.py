@@ -37,13 +37,10 @@ except OSError:
 tifFiles=im.saveImageSeriesToStacks(images,fnOut,prefix=prefix,axes='ZYX',channel=0,debug=True)
 
 #Run ilastik
-#print tifFiles
-#tifFiles=tifFiles[0:2]
-#print tifFiles
 probFiles=ilm.runIlastik(tifFiles,classFile="classifiers/Dorsal_Dapi_alex3.ilp")
 
 #Threshhold
-#probFiles=['../data/tifs/160804_toll10B_dapi_series0_c0_Probabilities.h5', '../data/tifs/160804_toll10B_dapi_series1_c0_Probabilities.h5']
+probFiles=['../data/tifs/160804_toll10B_dapi_series0_c0_Probabilities.h5', '../data/tifs/160804_toll10B_dapi_series1_c0_Probabilities.h5']
 
 fig=plt.figure()
 fig.show()
@@ -54,6 +51,10 @@ for i,fn in enumerate(probFiles):
 	ax=fig.add_subplot(1,len(probFiles),i)
 	
 	for j in range(len(angles)):
+		
+		#Align with maximum value
+		#angleAligned,signalAligned
+		#anglesAligned.append
 		
 		color=cm.jet(float(j)/len(angles))
 		

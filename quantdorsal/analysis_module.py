@@ -291,12 +291,12 @@ def fitEllipseToMask(mask):
 	
 	return center, lengths, rot,x,y,xEll,yEll
 
-def normImg(img,signalChannel,normChannel=0):
+def normImg(img,signalChannel,normChannel=0,offset=0.01):
 	
 	"""Norms data in channel signalChannel by
 	the one in normChannel."""
 	
-	img[signalChannel]=img[signalChannel]/img[normChannel]
+	img[signalChannel]=(img[signalChannel]+offset)/(img[normChannel]+offset)
 	
 	return img
 

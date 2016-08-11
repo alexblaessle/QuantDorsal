@@ -87,7 +87,7 @@ def runIlastik(files,fnOut=None,classFile="classifiers/quantDorsalDefault.ilp",c
 		print cmd
 		
 		#Run command
-		runCommand(cmd,fnStout=fn.replace(".tif",".stout"),fnSterr=fn.replace(".tif",".sterr"))
+		runCommand(cmd,fnStout=fn.replace(".tif",".stout"),fnSterr=fn.replace(".tif",".sterr"),redirect=True)
 	
 	return outFiles
 
@@ -235,6 +235,26 @@ def getH5FilesFromFolder(fn):
 	newFiles.sort()
 	
 	return newFiles  	
+
+def filterBrokenH5(probFiles,tifFiles):
 	
+	"""Checks if a probFile exist for each tifFile, if not
+	remembers the index."""
+
+	brokenIdx=[]
+		
+	for i,tfile in enumerate(tifFiles):
+		base=tfile.replace(".tif","")
+		found=False
+
+		
+		for pfile in probFiles:
+			if base in pfile:
+				print base, pfile
+				found=True
+				break
+		if not found:
+			printWarning(os.path.basename(tfile) + " has not corresponding probFile.")
+			brokenIdx.append(i)
 	
-	
+	return brokenIdx		

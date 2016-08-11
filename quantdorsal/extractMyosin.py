@@ -15,11 +15,11 @@ images=im.readImageData(fn)
 newImages=[]
 for i,img in enumerate(images):
 	
-		
-
-	if img.shape[2]==792:
-		newImages.append(img[0])
-		print img[0].shape
+	print i,img.shape
+	
+	
+	newImages.append(img[1])
+	print img[1].shape
 #newImages=np.concatenate(newImages,axis=0)
 
 	tifffile.imsave("trainingDataSet"+str(i)+".tif",img[0])

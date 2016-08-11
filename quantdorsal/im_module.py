@@ -109,11 +109,19 @@ def readAllTiffsInFolder(fnFolder):
 	#Loop through files
 	for f in files:
 		if f.endswith('.tif'):
-			
+			print fnFolder+f	
 			#Load image
-			img=tifffile.imread(fnFolder+f)
-			images.append(img)
+			try:
+				img=tifffile.imread(fnFolder+f)
+				print "Successfully loaded ", fnFolder+f 
+				images.append(img)
+
+			except:
+				printWarning("Could not load file "+ fnFolder+f)
+				
+
 			
+					
 	return images
 	
 def loadImg(fn,enc,dtype='float'):

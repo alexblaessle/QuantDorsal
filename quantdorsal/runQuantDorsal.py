@@ -20,10 +20,11 @@ import matplotlib.pyplot as plt
 from matplotlib import cm
 
 #Set some global parameters
+#classifier="classifiers/stacks_classifier.ilp"
 classifier="classifiers/Dorsal_Dapi_alex3.ilp"
 signalChannel=2
 dapiChannel=0
-probThresh=0.8
+probThresh=0.5
 probIdx=0
 proj='mean'
 bins=50
@@ -41,6 +42,8 @@ images=im.readImageData(fnIn,nChannel=3,destChannel=0)
 
 #Save stacks to tifs
 prefix=os.path.basename(fnIn).replace(".zip.lif","")
+if prefix=="":
+	prefix="out"
 fnOut=os.path.dirname(fnIn)+"/"+prefix+"/"
 
 try:
@@ -55,6 +58,18 @@ if ilastik:
 	probFiles=ilm.runIlastik(tifFiles,classFile=classifier)
 else:
 	probFiles=ilm.getH5FilesFromFolder(fnOut)
+
+#Filter out datasets that lack h5 file (out of whatever reason)
+
+print len(images)
+brokenIdx=ilm.filterBrokenH5(probFiles,tifFiles)
+print brokenIdx
+images = [i for j, i in enumerate(images) if j not in brokenIdx]
+print len(images)
+raw_input()
+
+
+
 
 #probFiles=['../data/tifs/160804_toll10B_dapi_series0_c0_Probabilities.h5', '../data/tifs/160804_toll10B_dapi_series1_c0_Probabilities.h5']
 
@@ -119,10 +134,19 @@ for i in range(len(allAnglesAligned)):
 		
 		
 		plt.draw()	
+
+results=np.asarray([allAnglesAligned,allSignalsAligned])
+
+#Save results
+figAll.savefig(fnOut+"finalFig.png")
+np.save(fnOut+"distributions.npy",results)
+
 	
 	
 print "done"
-raw_input()
+
+
+
 
 
 	

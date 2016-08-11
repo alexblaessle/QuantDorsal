@@ -80,8 +80,8 @@ def readImageData(fn,nChannel=3,destChannel=0):
 	#Make sure that channels are in first axis
 	newImages=[]
 	for img in images:
-		print type(img)
-		print np.shape(img)
+		#print type(img)
+		#print np.shape(img)
 		
 		img=sortChannel(img,nChannel,destChannel=destChannel)		
 		newImages.append(img)
@@ -310,9 +310,10 @@ def sortChannel(img,nChannel,destChannel=0):
 	
 	"""
 	
-	for i in img.shape:
+	for j,i in enumerate(img.shape):
+		
 		if i==nChannel:
-			np.swapaxes(img,i,destChannel)
+			img=np.swapaxes(img,j,destChannel)
 			return img
 	return img
 			

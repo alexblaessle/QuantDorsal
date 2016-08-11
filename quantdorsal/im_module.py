@@ -30,6 +30,7 @@ import bioformats
 
 #System
 import sys
+import os
 
 #Matplotlib
 import matplotlib.pyplot as plt
@@ -60,6 +61,8 @@ def readImageData(fn,nChannel=3,destChannel=0):
 	
 	"""
 	
+	images=[]
+	
 	#If folder, use folder function
 	if os.path.isdir(fn):
 		images=readAllTiffsInFolder(fn)
@@ -72,11 +75,13 @@ def readImageData(fn,nChannel=3,destChannel=0):
 			
 		#Otherwise, just try bioformat	
 		else:
-			image,meta=readBioFormats(fn)
-
+			images,meta=readBioFormats(fn)
+			
 	#Make sure that channels are in first axis
 	newImages=[]
 	for img in images:
+		print type(img)
+		print np.shape(img)
 		
 		img=sortChannel(img,nChannel,destChannel=destChannel)		
 		newImages.append(img)

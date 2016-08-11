@@ -1,5 +1,5 @@
 # Don't push data
-data/
+testdata/
 quantdorsal/classifiers/trainDataSet/
 quantdorsal/classifiers/temp/
 quantdorsal/classifiers/

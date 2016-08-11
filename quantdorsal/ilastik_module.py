@@ -29,9 +29,6 @@ import shlex
 #H5
 import h5py
 
-#Matplotlib
-import matplotlib.pyplot as plt
-
 #QuantDorsal
 from term_module import *
 

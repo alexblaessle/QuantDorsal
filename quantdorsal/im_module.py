@@ -20,11 +20,8 @@ Contains functions for
 
 #Numpy/Scipy
 import numpy as np
-from numpy.linalg import eig, inv
-from scipy.optimize import curve_fit # for fitting gaussian
 
-#Scikit image
-import skimage.io
+#Tifffile
 import tifffile
 	
 #Bioformats
@@ -58,7 +55,7 @@ def loadImg(fn,enc,dtype='float'):
 	"""
 	
 	#Load image
-	img = skimage.io.imread(fn).astype(enc)
+	img = tifffile.imread(fn).astype(enc)
 	
 	#Getting img values
 	img=img.real
@@ -93,7 +90,7 @@ def saveImg(img,fn,enc="uint16",scale=True,maxVal=None):
 	#Scale img
 	if scale:
 		img=scaleToEnc(img,enc,maxVal=maxVal)
-	skimage.io.imsave(fn,img)
+	tifffile.imsave(fn,img)
 	
 	return fn
 
@@ -222,6 +219,31 @@ def getEnumStr(num,maxNum,L=None):
 	
 	return enumStr
 				
+
+def sortChannel(img,nChannel,destChannel=0):
+	
+	"""Switches axis such that the axis of size nChannel
+	is at index destChannel.
+	
+	.. warning:: Will probably not work if image has nStacks=nChannel.
+	
+	Args:
+		img (numpy.ndarray): Image
+		nChannel (int): Number of channels.
+		
+	Keyword Args:
+		destChannel (int): Axis where channels should go to.
+	
+	Returns:
+		numpy.ndarray: Sorted image.
+	
+	"""
+	
+	for i in img.shape:
+		if i==nChannel:
+			np.swapaxes(img,i,destChannel)
+			return img
+	return img
 			
 def readBioFormatsMeta(fn):
 	

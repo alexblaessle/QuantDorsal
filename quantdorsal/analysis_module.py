@@ -291,7 +291,16 @@ def fitEllipseToMask(mask):
 	
 	return center, lengths, rot,x,y,xEll,yEll
 
-def createSignalProfileFromH5(img,fn,signalChannel=2,probThresh=0.8,probIdx=0,proj=None,bins=None,bkgd=None,debug=False):
+def normImg(img,signalChannel,normChannel=0):
+	
+	"""Norms data in channel signalChannel by
+	the one in normChannel."""
+	
+	img[signalChannel]=img[signalChannel]/img[normChannel]
+	
+	return img
+
+def createSignalProfileFromH5(img,fn,signalChannel=2,probThresh=0.8,probIdx=0,proj=None,bins=None,bkgd=None,norm=True,debug=False):
 	
 	"""Builds angular signal distribution using h5 file as input.
 	
@@ -326,6 +335,7 @@ def createSignalProfileFromH5(img,fn,signalChannel=2,probThresh=0.8,probIdx=0,pr
 		bins (int): Number of angular bins.
 		bkgd (float): Background intensity.
 		debug (bool): Show debugging plots.
+		norm (bool): Norm by dapi channel.
 	
 	Returns:
 		tuple: Tuple containing:
@@ -335,6 +345,10 @@ def createSignalProfileFromH5(img,fn,signalChannel=2,probThresh=0.8,probIdx=0,pr
 	
 	"""
 	
+	#Norm 
+	if norm:
+		img=normImg(img,signalChannel,normChannel=0)
+		
 	#Make mask
 	mask,maskedImg=maskImgFromH5(fn,img,probIdx=probIdx,probThresh=probThresh,channel=signalChannel)
 	

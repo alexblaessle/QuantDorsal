@@ -41,6 +41,76 @@ from term_module import *
 #Module Functions
 #===========================================================================================================================================================================
 
+def readImageData(fn,nChannel=3,destChannel=0):
+	
+	"""Loads image data.
+	
+	If input is a folder, will try to load all tif files in the folder, else
+	will try to either load tif or bioformat input.
+	
+	Args:
+		fnFolder (str): Path to folder.
+			
+	Keyword Args:
+		nChannel (int): Number of channels.
+		destChannel (int): Axis where channels should go to.
+		
+	Returns:
+		list: List of loaded images.
+	
+	"""
+	
+	#If folder, use folder function
+	if os.path.isdir(fn):
+		images=readAllTiffsInFolder(fn)
+	
+	else:
+		#If tif, load tif
+		if fn.endswith(".tif"):
+			img=loadImg(fn)
+			images=[img]
+			
+		#Otherwise, just try bioformat	
+		else:
+			image,meta=readBioFormats(fn)
+
+	#Make sure that channels are in first axis
+	newImages=[]
+	for img in images:
+		
+		img=sortChannel(img,nChannel,destChannel=destChannel)		
+		newImages.append(img)
+		
+	return newImages
+
+def readAllTiffsInFolder(fnFolder):
+	
+	"""Loads all tiff files in folder.
+	
+	Args:
+		fnFolder (str): Path to folder.
+		
+	Returns:
+		list: List of loaded images.
+	
+	"""
+	
+	#Get files in folder
+	files=os.listdir(fnFolder)
+	
+	#Result list
+	images=[]
+	
+	#Loop through files
+	for f in files:
+		if f.endswith('.tif'):
+			
+			#Load image
+			img=tifffile.imread(fnFolder+f)
+			images.append(img)
+			
+	return images
+	
 def loadImg(fn,enc,dtype='float'):
 	
 	"""Loads image from filename fn with encoding enc and returns it as with given dtype.
@@ -55,11 +125,7 @@ def loadImg(fn,enc,dtype='float'):
 	"""
 	
 	#Load image
-	img = tifffile.imread(fn).astype(enc)
-	
-	#Getting img values
-	img=img.real
-	img=img.astype(dtype)
+	img = tifffile.imread(fn)
 	
 	return img
 

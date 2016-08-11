@@ -25,7 +25,7 @@ signalChannel=2
 dapiChannel=0
 probThresh=0.8
 probIdx=0
-proj='sum'
+proj='mean'
 bins=50
 debug=False
 bkgd=None
@@ -36,8 +36,8 @@ ilastik=False
 #Parse in filename
 fnIn=sys.argv[1]
 
-#Load bioformats image data
-images,meta=im.readBioFormats(fnIn)
+#Load image data
+images=im.readImageData(fnIn,nChannel=3,destChannel=0)
 
 #Save stacks to tifs
 prefix=os.path.basename(fnIn).replace(".zip.lif","")

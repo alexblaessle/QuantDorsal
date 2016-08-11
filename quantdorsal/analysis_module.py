@@ -117,8 +117,6 @@ def ellipseAxisLength(a):
 	down1=(b*b-a*c)*( (c-a)*np.sqrt(1+4*b*b/((a-c)*(a-c)))-(c+a))
 	down2=(b*b-a*c)*( (a-c)*np.sqrt(1+4*b*b/((a-c)*(a-c)))-(c+a))
 	
-	print down1,down2
-	
 	res1=np.sqrt(up/down1)
 	res2=np.sqrt(up/down2)
 	return np.array([res1, res2])
@@ -200,6 +198,17 @@ def invEllipse(x,y,center,lengths,alpha):
 def maskImg(img,mask,channel):
 	
 	"""Applies mask to image in specific channel. 
+	
+	Args:
+		img (numpy.ndarray): Image stack.
+		mask (numpy.ndarray): Mask.
+	
+	Keyword Args:	
+		channel (int): Index of channel with signal.
+		
+	Returns:
+		numpy.ndarray: Masked Image.
+	
 	"""
 	
 	img=img[channel]
@@ -208,8 +217,24 @@ def maskImg(img,mask,channel):
 
 def maskImgFromH5(fn,img,probIdx=0,probThresh=0.8,channel=1):
 	
-	"""Reads h5 files and produces binary mask
+	"""Reads h5 files and produces binary mask, then masks channel of
+	image.
 	
+	Args:
+		img (numpy.ndarray): Image stack.
+		fn (str): Path to h5 file.
+	
+	Keyword Args:	
+		channel (int): Index of channel with signal.
+		probThresh (float): Probability threshhold used.
+		probIdx (int): Index of which label in h5 file to be used.
+	
+	Returns:
+		tuple: Tuple containing:
+			
+			* mask (numpy.ndarray): Mask.
+			* maskedImg (numpy.ndarray): Masked Image.
+			
 	"""
 	
 	#Load data
@@ -230,6 +255,23 @@ def fitEllipseToMask(mask):
 	
 	"""Fits ellipse to mask.
 	
+	.. note:: Will consider mask values greater than 0.5 .
+	
+	Args:
+		mask (numpy.ndarray): A Mask.
+		
+	Returns:
+		tuple: Tuple containing:
+		
+			* center (list): Center of ellipse.
+			* lengths (list): Lengths of ellipse.
+			* rot (float): Rotation angle of ellipse.
+			* x (numpy.ndarray): x-coordinates of mask.
+			* y (numpy.ndarray): y-coordinates of mask.
+			* xEll (numpy.ndarray): x-coordinates of ellipse.
+			* yEll (numpy.ndarray): y-coordinates of ellipse.
+			
+			
 	"""
 	
 	#Build coordinate grid
@@ -249,7 +291,7 @@ def fitEllipseToMask(mask):
 	
 	return center, lengths, rot,x,y,xEll,yEll
 
-def createSignalProfileFromH5(img,fn,signalChannel=2,probThresh=0.8,probIdx=0,maxInt=False,hist=False,bins=20,maskBkgd=False,bkgd=5.,debug=False):
+def createSignalProfileFromH5(img,fn,signalChannel=2,probThresh=0.8,probIdx=0,proj=None,bins=None,bkgd=None,debug=False):
 	
 	"""Builds angular signal distribution using h5 file as input.
 	
@@ -260,6 +302,18 @@ def createSignalProfileFromH5(img,fn,signalChannel=2,probThresh=0.8,probIdx=0,ma
 		* Fits ellipse to mask.
 		* Creates angular distribution profile.
 	
+	There are multiple projections available:
+	
+		* ``proj=None``: No projection.
+		* ``proj="max"``: Maximum intensity projection.
+		* ``proj="sum"``: Sum intensity projection.
+		* ``proj="mean"``: Mean intensity projection.
+	
+	If ``bins!=None``, will perform angular binning with ``bins`` bins.
+	
+	If ``bkgd!=None``, will filter background with threshhold ``bkgd``.
+	
+	
 	Args:
 		img (numpy.ndarray): Image stack.
 		fn (str): Path to h5 file.
@@ -269,9 +323,7 @@ def createSignalProfileFromH5(img,fn,signalChannel=2,probThresh=0.8,probIdx=0,ma
 		probThresh (float): Probability threshhold used.
 		probIdx (int): Index of which label in h5 file to be used.
 		maxInt (bool): Perform maximum intensity projection of stack.
-		hist (bool): Perform angular binning.
 		bins (int): Number of angular bins.
-		maskBkgd (bool): Mask angular background.
 		bkgd (float): Background intensity.
 		debug (bool): Show debugging plots.
 	
@@ -287,28 +339,39 @@ def createSignalProfileFromH5(img,fn,signalChannel=2,probThresh=0.8,probIdx=0,ma
 	mask,maskedImg=maskImgFromH5(fn,img,probIdx=probIdx,probThresh=probThresh,channel=signalChannel)
 	
 	##If maximum intensity projection is selected, do so
-	if maxInt:
+	if proj!=None:
 		
 		#Perform projection
-		mask=im.maxIntProj(mask,0)
-		maskedImg=im.maxIntProj(maskedImg,0)
+		if proj=="max":
+			mask=im.maxIntProj(mask,0)
+			maskedImg=im.maxIntProj(maskedImg,0)
+		elif proj=="sum":
+			mask=im.sumIntProj(mask,0)
+			maskedImg=im.sumIntProj(maskedImg,0)	
+		elif proj=="mean":
+			mask=im.meanIntProj(mask,0)
+			maskedImg=im.meanIntProj(maskedImg,0)
 		
 		#Add another axis so we have a fake zstack
 		mask= mask[np.newaxis,:]		
 		maskedImg= maskedImg[np.newaxis,:]
 	
 	#Get signal profile
-	angles,signals=createSignalProfile(maskedImg,mask,img,maxInt=maxInt,hist=hist,bins=bins,maskBkgd=maskBkgd,bkgd=bkgd,debug=debug)
+	angles,signals=createSignalProfile(maskedImg,mask,img,bins=bins,bkgd=bkgd,debug=debug)
 	
 	return angles,signals
 	
-def createSignalProfile(maskedImg,mask,img,signalChannel=1,maxInt=False,hist=False,bins=20,maskBkgd=False,bkgd=5.,debug=False):
+def createSignalProfile(maskedImg,mask,img,signalChannel=1,bins=None,bkgd=None,debug=False):
 	
 	"""Builds angular signal distribution given a masked Image and its mask.
 	
 	Does the following:
 		* Fits ellipse to mask.
 		* Creates angular distribution profile.
+	
+	If ``bins!=None``, will perform angular binning with ``bins`` bins.
+	
+	If ``bkgd!=None``, will filter background with threshhold ``bkgd``.
 	
 	Args:
 		maskedImg (numpy.ndarray): Masked image stack.
@@ -320,10 +383,7 @@ def createSignalProfile(maskedImg,mask,img,signalChannel=1,maxInt=False,hist=Fal
 		signalChannel (int): Index of channel with signal.
 		probThresh (float): Probability threshhold used.
 		probIdx (int): Index of which label in h5 file to be used.
-		maxInt (bool): Perform maximum intensity projection of stack.
-		hist (bool): Perform angular binning.
 		bins (int): Number of angular bins.
-		maskBkgd (bool): Mask angular background.
 		bkgd (float): Background intensity.
 		debug (bool): Show debugging plots.
 	
@@ -353,16 +413,14 @@ def createSignalProfile(maskedImg,mask,img,signalChannel=1,maxInt=False,hist=Fal
 		t,signal=sortByAngle(t,signal)
 		
 		#If maskZero is selected, pop bkgd intensity 
-		if maskBkgd:
+		if bkgd!=None:
 			t=t[np.where(signal>bkgd)[0]]
 			signal=signal[np.where(signal>bkgd)[0]]
 			
 		#Bin if selected
-		if hist:
-			#t,signal=simpleHist(t,signal,bins)
+		if bins!=None:
 			t,signal=binData(t,signal,bins)
-			print len(t), len(signal)	
-	
+			
 		#Append
 		signals.append(signal)
 		angles.append(t)
@@ -387,7 +445,6 @@ def showProfileDebugPlots(img,mask,maskedImg,idx,signal,angle,xEll,yEll,channelI
 	axes[1,0].plot(xEll,yEll,'g')
 	axes[2,0].imshow(maskedImg[idx])
 	axes[2,1].plot(angle,signal,'r')
-	#axes[2,1].scatter(xEll,yEll,'r')
 	
 	plt.draw()
 	raw_input()
@@ -396,7 +453,19 @@ def showProfileDebugPlots(img,mask,maskedImg,idx,signal,angle,xEll,yEll,channelI
 	
 def sortByAngle(angle,signal):
 	
-	"""Sorts angle and signal vector by angle."""
+	"""Sorts angle and signal vector by angle.
+	
+	Args:
+		angle (numpy.ndarray): Angle array.
+		signal (numpy.ndarray): Signal array.
+	
+	Returns:
+		tuple: Tuple containing:
+		
+			* angle (numpy.ndarray): Angle array.
+			* signal (numpy.ndarray): Signal array.
+		
+	"""
 	
 	idx = angle.argsort()
 	angle = angle[idx[::-1]]
@@ -404,64 +473,25 @@ def sortByAngle(angle,signal):
 
 	return angle,signal
 
-#def alignSignalProfiles(angles,signals):
-	
-	#anglesAligned=[]
-	#signalsAligned=[]
-	
-	#for i in range(len(angles)):
+def binData(x,y,bins):
 		
-		
-def simpleHist(x,y,bins):
-
-	"""Performs a simple histogram onto x-array.
+	"""Bins data.
 	
 	Args:
-		x (numpy.ndarray): x coordinates of data
-		y (numpy.ndarray): y coordinates of data
-		bins (int):  number of bins
-	
+		x (numpy.ndarray): x-data.
+		y (numpy.ndarray): y-data.
+		bins (int): Number of bins.
+		
 	Returns:
 		tuple: Tuple containing:
 		
-			* xBin (numpy.ndarray): Center of bins
-			* yBin (numpy.ndarray): Bin Values
-		
-	"""
+			* xBin (numpy.ndarry): Mid-points of bins.
+			* binMeans (numpy.ndarray): Binned data.
 	
-
-	xBin=np.linspace(min(x),max(x),bins+1)
-	
-	print x[0], xBin[0],x[-1],xBin[-1]
-	
-	
-	
-	iLast=0
-	j=1
-	
-	yBin=[]
-	
-	for i,xv in enumerate(x):
-		try:	
-			if xv>=xBin[j]:
-				yBin.append(np.mean(y[iLast:i]))
-				iLast=i
-				j=j+1
-				
-				
-		except IndexError:
-			pass
-
-	xBin=np.diff(xBin)+xBin[:-1]
-	
-	return xBin,np.asarray(yBin)		
-
-def binData(x,y,bins):
-		
-	"""Bins data."""	
+	"""	
 	
 	#Bin array
-	bins=np.linspace(x.min(),x.max(),bins)
+	bins=np.linspace(x.min(),x.max(),bins+1)
 
 	#Find idxs
 	idx=np.digitize(x,bins)
@@ -564,4 +594,17 @@ def alignDorsal(x,intensity,dorsal=0,phase=0,method='maxIntensity',opt=None):
 
 	return phi, alignInt
 	
+def multGauss(x, *params):
+    
+	""" Function of multiple gaussian distribution 
+		
+	check: http://stackoverflow.com/questions/26902283/fit-multiple-gaussians-to-the-data-in-python
+	"""
 	
+	y = np.zeros_like(x)
+	for i in range(0, len(params), 3):
+		ctr = params[i]
+		amp = params[i+1]
+		wid = params[i+2]
+		y = y + amp * np.exp( -((x - ctr)/wid)**2)
+	return y	

@@ -217,17 +217,27 @@ def makeProbMask(array,thresh=0.8,debug=False):
 
 def getH5FilesFromFolder(fn):
 	
+	"""Returns paths to all h5 files given in a certain folder.
+	
+	Files will be sorted.
+	
+	Args:
+		fn (str): Path to folder.
+		
+	Returns:
+		list: List of files.
+	
+	"""
+	
 	files=os.listdir(fn)
 	
 	newFiles=[]
 	for f in files:
-		print f
 		if f.endswith(".h5"):
 			newFiles.append(fn+f)
+	newFiles.sort()
 	
-	print newFiles
-	
-	return newFiles.sort()		
+	return newFiles  	
 	
 	
 	

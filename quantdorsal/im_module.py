@@ -464,32 +464,81 @@ def maxIntProj(img,axis):
 		numpy.ndarray: Projection.
 		
 	"""
-	
-	
-	
+
 	#Maximum intensity projection
 	proj=img.max(axis=axis)
 	
 	return proj
 
-def multGauss(x, *params):
-    
-	""" Function of multiple gaussian distribution 
+def sumIntProj(img,axis):
+	
+	"""Performs sum intensity projection along 
+	axis.
+	
+	Args:
+		img (numpy.ndarray): Some image data.
+		axis (int): Axis to perfrom projection along.
+	
+	Return:
+		numpy.ndarray: Projection.
 		
-	check: http://stackoverflow.com/questions/26902283/fit-multiple-gaussians-to-the-data-in-python
 	"""
 	
-	y = np.zeros_like(x)
-	for i in range(0, len(params), 3):
-		ctr = params[i]
-		amp = params[i+1]
-		wid = params[i+2]
-		y = y + amp * np.exp( -((x - ctr)/wid)**2)
-	return y
+	#Turn zeros into NaN
+	img=maskZeroToNaN(img)
 	
+	#Sum intensity projection
+	proj=np.nansum(img,axis=axis)
+	
+	#Resubstitute zeros into proj
+	proj=maskNaNToZero(proj)
+	
+	return proj
 
+def meanIntProj(img,axis):
+	
+	"""Performs mean intensity projection along 
+	axis.
+	
+	Args:
+		img (numpy.ndarray): Some image data.
+		axis (int): Axis to perfrom projection along.
+	
+	Return:
+		numpy.ndarray: Projection.
+		
+	"""
+	
+	#Turn zeros into NaN
+	img=maskZeroToNaN(img)
+	
+	#Mean intensity projection
+	proj=np.nanmean(img,axis=axis)
+	
+	#Resubstitute zeros into proj
+	proj=maskNaNToZero(proj)
+	
+	return proj
 
+def maskZeroToNaN(img):
 
+	"""Replaces all zeros in image with NaN.
+	
+	"""
+	
+	img[np.where(img==0)]=np.nan
+	
+	return img
+
+def maskNaNToZero(img):
+
+	"""Replaces all NaNs in image with zeros.
+	
+	"""
+	
+	img[np.where(np.isnan(img))]=0.
+	
+	return img
 
 def scaleToEnc(img,enc,maxVal=None):
 	

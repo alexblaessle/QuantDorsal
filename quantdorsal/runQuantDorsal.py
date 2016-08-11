@@ -25,14 +25,13 @@ signalChannel=2
 dapiChannel=0
 probThresh=0.8
 probIdx=0
-maxInt=True
-hist=True
+proj='sum'
 bins=50
-maskBkgd=True
 debug=False
+bkgd=None
 
 #Flags what to do
-ilastik=True
+ilastik=False
 
 #Parse in filename
 fnIn=sys.argv[1]
@@ -56,8 +55,7 @@ if ilastik:
 	probFiles=ilm.runIlastik(tifFiles,classFile=classifier)
 else:
 	probFiles=ilm.getH5FilesFromFolder(fnOut)
-	print probFiles
-	raw_input()
+
 #probFiles=['../data/tifs/160804_toll10B_dapi_series0_c0_Probabilities.h5', '../data/tifs/160804_toll10B_dapi_series1_c0_Probabilities.h5']
 
 allSignalsAligned=[]
@@ -69,7 +67,7 @@ for i,fn in enumerate(probFiles):
 		
 	#Generate angular distributions	
 	angles,signals=am.createSignalProfileFromH5(images[i],fn,signalChannel=signalChannel,probThresh=probThresh,probIdx=probIdx,
-					     maxInt=maxInt,hist=hist,bins=bins,maskBkgd=maskBkgd,debug=debug)
+					     proj=proj,bins=bins,bkgd=bkgd,debug=debug)
 
 	#Bookkeeping lists
 	anglesAligned=[]
@@ -87,8 +85,8 @@ for i,fn in enumerate(probFiles):
 	allSignalsAligned.append(signalsAligned)
 	
 #Plot angular distributions
-figSeries=plt.figure()
-figSeries.show()
+#figSeries=plt.figure()
+#figSeries.show()
 
 figAll=plt.figure()
 figAll.show()

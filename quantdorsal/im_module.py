@@ -103,6 +103,8 @@ def readAllTiffsInFolder(fnFolder):
 	#Get files in folder
 	files=os.listdir(fnFolder)
 	
+	#files.sort()
+	
 	#Result list
 	images=[]
 	
@@ -690,3 +692,40 @@ def scaleToEnc(img,enc,maxVal=None):
 	img=img.astype(enc)
 	
 	return img
+
+def imshow(img):
+	
+	"""Shows image data.
+
+	If image data is multichannel, will show channels seperately.
+
+	"""	
+
+	fig=plt.figure()
+	
+	if len(img.shape)>2:
+		fig,axes=makeAxes([np.ceil(img.shape[0]/3.),3])
+		
+		for i in range(img.shape[0]):
+			axes[i].imshow(img[i])
+			plt.draw()
+	else:
+		fig,axes=makeAxes([1,1])
+
+	return axes
+
+		
+		
+def makeAxes(size):
+	
+	"""Makes figure with size subplots."""
+
+	fig=plt.figure()
+	fig.show()
+	axes=[]	
+	print size
+	for i in range(int(size[0])*int(size[1])):
+
+		axes.append(fig.add_subplot(size[0],size[1],i))
+
+	return fig,axes

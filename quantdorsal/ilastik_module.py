@@ -250,7 +250,7 @@ def filterBrokenH5(probFiles,tifFiles):
 		
 		for pfile in probFiles:
 			if base in pfile:
-				print base, pfile
+				
 				found=True
 				break
 		if not found:

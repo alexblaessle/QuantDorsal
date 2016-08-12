@@ -7,6 +7,7 @@
 import im_module as im
 import ilastik_module as ilm
 import analysis_module as am
+from term_module import *
 
 #Numpy
 import numpy as np
@@ -21,18 +22,19 @@ from matplotlib import cm
 
 #Set some global parameters
 #classifier="classifiers/stacks_classifier.ilp"
-classifier="classifiers/Dorsal_Dapi_alex3.ilp"
+classifier="classifiers/done_with_matt.ilp"
 signalChannel=2
 dapiChannel=0
 probThresh=0.5
 probIdx=0
-proj='mean'
+proj='max'
 bins=50
 debug=False
 bkgd=None
+minPix=10000
 
 #Flags what to do
-ilastik=False
+ilastik=True
 
 #Parse in filename
 fnIn=sys.argv[1]
@@ -60,36 +62,36 @@ else:
 	probFiles=ilm.getH5FilesFromFolder(fnOut)
 
 #Filter out datasets that lack h5 file (out of whatever reason)
-
-print len(images)
 brokenIdx=ilm.filterBrokenH5(probFiles,tifFiles)
-print brokenIdx
 images = [i for j, i in enumerate(images) if j not in brokenIdx]
-print len(images)
-raw_input()
-
-
-
-
-#probFiles=['../data/tifs/160804_toll10B_dapi_series0_c0_Probabilities.h5', '../data/tifs/160804_toll10B_dapi_series1_c0_Probabilities.h5']
+tifFiles = [i for j, i in enumerate(tifFiles) if j not in brokenIdx]
 
 allSignalsAligned=[]
 allAnglesAligned=[]
 
-
 #Loop through all probability files
 for i,fn in enumerate(probFiles):
-		
+	
+	print i
+	
 	#Generate angular distributions	
 	angles,signals=am.createSignalProfileFromH5(images[i],fn,signalChannel=signalChannel,probThresh=probThresh,probIdx=probIdx,
-					     proj=proj,bins=bins,bkgd=bkgd,debug=debug)
+					     proj=proj,bins=bins,bkgd=bkgd,minPix=minPix,median=3,debug=debug)
 
 	#Bookkeeping lists
 	anglesAligned=[]
 	signalsAligned=[]
 	
+	if angles==None:
+		printWarning("Had to exclude dataset "  + os.path.basename(tifFiles[i]) + " due to minPix requirement.")
+		continue
+	
 	#Align distributions
 	for j in range(len(angles)):
+		
+		if np.isnan(angles[j].max()):
+			printWarning("Had to exclude dataset "  + os.path.basename(tifFiles[i]) + " due to minPix requirement.")
+			continue
 		
 		#Align with maximum value
 		angleAligned,signalAligned=am.alignDorsal(angles[j],np.asarray([signals[j],signals[j]]))
@@ -99,41 +101,36 @@ for i,fn in enumerate(probFiles):
 	allAnglesAligned.append(anglesAligned)
 	allSignalsAligned.append(signalsAligned)
 	
-#Plot angular distributions
-#figSeries=plt.figure()
-#figSeries.show()
-
 figAll=plt.figure()
 figAll.show()
 
 #Create axis
-axAll=figAll.add_subplot(1,1,1)
-rowIdx=0
-
-#rowIdx=np.mod(len(allAnglesAligned),3)
-#Idx=np.mod(len(allAnglesAligned),3)
-
-	
-	
+axAll=figAll.add_subplot(1,1,1)	
 for i in range(len(allAnglesAligned)):
-	
-	#if columnIdx==1:
-		#rowIdx=rowIdx+1
-		
-	#print rowIdx,columnIdx,i+1
-	#axSeries=figSeries.add_subplot(rowIdx,columnIdx,i+1)
 		
 	color=cm.jet(float(i)/len(allAnglesAligned))
 	for j in range(len(allAnglesAligned[i])):
-		
-		#axSeries.plot(allAnglesAligned[i][j],allSignalsAligned[i][j],color=color)
-		#axSeries.set_title("series = "+str(i))
-		
-		
+			
 		axAll.plot(allAnglesAligned[i][j],allSignalsAligned[i][j],color=color,label="series = "+str(i))
 		
 		
 		plt.draw()	
+
+#Make stats figure
+meanSignal,stdSignal=am.getStats(allSignalsAligned)
+fig,axes=im.makeAxes([1,1])
+
+print meanSignal.shape
+print stdSignal.shape
+
+meanSignal=meanSignal[0]
+stdSignal=stdSignal[0]
+print meanSignal.shape
+
+print allAnglesAligned[0][0].shape
+axes[0].errorbar(allAnglesAligned[0][0], meanSignal, yerr=stdSignal)
+plt.draw()
+fig.savefig(fnOut+"statsFig.png")
 
 results=np.asarray([allAnglesAligned,allSignalsAligned])
 
@@ -141,8 +138,6 @@ results=np.asarray([allAnglesAligned,allSignalsAligned])
 figAll.savefig(fnOut+"finalFig.png")
 np.save(fnOut+"distributions.npy",results)
 
-	
-	
 print "done"
 
 
@@ -150,4 +145,5 @@ print "done"
 
 
 	
+
 

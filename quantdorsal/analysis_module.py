@@ -16,6 +16,7 @@ Contains functions for
 import numpy as np
 from numpy.linalg import eig, inv
 from scipy.optimize import curve_fit # for fitting gaussian
+import scipy.signal as spsig
 
 #System
 import sys
@@ -300,7 +301,7 @@ def normImg(img,signalChannel,normChannel=0,offset=0.01):
 	
 	return img
 
-def createSignalProfileFromH5(img,fn,signalChannel=2,probThresh=0.8,probIdx=0,proj=None,bins=None,bkgd=None,norm=True,debug=False):
+def createSignalProfileFromH5(img,fn,signalChannel=2,probThresh=0.8,probIdx=0,proj=None,bins=None,bkgd=None,norm=True,minPix=0,median=None,debug=False):
 	
 	"""Builds angular signal distribution using h5 file as input.
 	
@@ -322,6 +323,7 @@ def createSignalProfileFromH5(img,fn,signalChannel=2,probThresh=0.8,probIdx=0,pr
 	
 	If ``bkgd!=None``, will filter background with threshhold ``bkgd``.
 	
+	If the mask includes less than ``minPix`` pixels, will abort and turn ``None``.
 	
 	Args:
 		img (numpy.ndarray): Image stack.
@@ -336,7 +338,9 @@ def createSignalProfileFromH5(img,fn,signalChannel=2,probThresh=0.8,probIdx=0,pr
 		bkgd (float): Background intensity.
 		debug (bool): Show debugging plots.
 		norm (bool): Norm by dapi channel.
-	
+		minPix (int): Minimum number of pixels that need to be included in mask.
+		median (int): Turn on median filter specific radius.		
+
 	Returns:
 		tuple: Tuple containing:
 		
@@ -345,6 +349,11 @@ def createSignalProfileFromH5(img,fn,signalChannel=2,probThresh=0.8,probIdx=0,pr
 	
 	"""
 	
+	#Median filter
+	if median!=None:
+		img[0]=medianFilter(img[0])	
+		img[signalChannel]=medianFilter(img[signalChannel])
+
 	#Norm 
 	if norm:
 		img=normImg(img,signalChannel,normChannel=0)
@@ -352,10 +361,13 @@ def createSignalProfileFromH5(img,fn,signalChannel=2,probThresh=0.8,probIdx=0,pr
 	#Make mask
 	mask,maskedImg=maskImgFromH5(fn,img,probIdx=probIdx,probThresh=probThresh,channel=signalChannel)
 	
-	##If maximum intensity projection is selected, do so
+	#Minimum pixel in mask that need to be 1.
+	if np.nansum(mask)<minPix:
+		return None,None
+	
+	#Perform projections if selected
 	if proj!=None:
 		
-		#Perform projection
 		if proj=="max":
 			mask=im.maxIntProj(mask,0)
 			maskedImg=im.maxIntProj(maskedImg,0)
@@ -420,6 +432,9 @@ def createSignalProfile(maskedImg,mask,img,signalChannel=1,bins=None,bkgd=None,d
 		#Get values of signal in shape of x,y
 		signal=maskedImg[i][np.where(mask[i]>0.5)].flatten()
 		
+		#Make sure that there is no NaN in img
+		signal[np.isnan(signal)]=0
+
 		#Compute angles
 		t=invEllipse(x,y,center,lengths,rot)
 		
@@ -487,6 +502,63 @@ def sortByAngle(angle,signal):
 
 	return angle,signal
 
+def getStats(signals):
+	
+	"""Computes mean and standard deviation for 
+	a list of signal arrays:
+
+	Args:
+		signals (list): List of signal arrays.
+
+	Returns:
+		tuple: Tuple containing:
+		
+			* meanSignal (numpy.ndarray): Mean signal.
+			* stdSignal (numpy.ndarray): Standard deviation of signal. 
+
+	"""
+	
+	#print type(signals), np.shape(signals)
+	#print np.shape(signals[0])
+	newSignals=[]
+	#for signal in signals:
+	#	newSignals.append(signal[1])
+	#signals=newSignals
+	
+	signals=np.asarray(signals)
+ 		
+	#print signals.shape
+	#raw_input()
+	stdSignal=np.std(signals,axis=0)
+	meanSignal=np.mean(signals,axis=0)
+
+	return meanSignal,stdSignal
+
+def medianFilter(img,radius=5):
+
+	"""Applies median filter to image.
+	
+	.. note:: Radius needs to be odd.
+
+	Args:	
+		img (numpy.ndarray): Some image.
+	
+	Keyword Args:
+		radius (int): Radius of filter.
+
+	Returns:
+		numpy.ndarray: Filtered image.
+	"""
+	
+	if len(img.shape)>2:
+
+		for i in range(img.shape[0]):
+			img[i]=spsig.medfilt(img[i],kernel_size=int(radius))
+	else:		
+		img=spsig.medfilt(img,kernel_size=int(radius))
+	
+	return img
+	
 def binData(x,y,bins):
 		
 	"""Bins data.
@@ -550,6 +622,7 @@ def alignDorsal(x,intensity,dorsal=0,phase=0,method='maxIntensity',opt=None):
 	n1,n2 = intensity.shape # n1 for number of colors, n2 resolution
 	dx = x[2]-x[1]  # inteval
 	phi = dx*(np.arange(nx)-np.floor(nx/2))  # odd number of data points, 0 at center, even number, 0 at nx/2
+	
 	id0 = np.mod(np.floor((nx)/2)+int(round(phase/dx)),nx)  # the position of the peak
 	
 	# find the dorsal intensity

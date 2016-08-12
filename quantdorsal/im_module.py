@@ -729,3 +729,101 @@ def makeAxes(size):
 		axes.append(fig.add_subplot(size[0],size[1],i))
 
 	return fig,axes
+
+
+def getPubParms():
+	"""Returns dictionary with good parameters for nice
+	publication figures.
+
+	Resulting ``dict`` can be loaded via ``plt.rcParams.update()``.
+	
+	.. note:: Use this if you want to include LaTeX symbols in the figure.
+	
+	Returns:	
+		dict: Parameter dictionary.
+	"""
+
+	params = {'backend': 'ps',
+	'axes.labelsize': 10,
+	'text.fontsize': 10,
+	'legend.fontsize': 10,
+	'xtick.labelsize': 10,
+	'ytick.labelsize': 10,
+	'text.usetex': True,
+	'font.family': 'sans-serif',
+'	font.sans-serif': 'Bitstream Vera Sans, Lucida Grande, Verdana, Geneva, Lucid, Arial, Helvetica, Avant Garde, sans-serif',
+	#'ytick.direction': 'out',
+	'text.latex.preamble': [r'\usepackage{helvet}', r'\usepackage{sansmath}'] , #r'\sansmath',
+	}	
+	return params
+
+
+def turnAxesForPub(ax,adjustFigSize=True,figWidthPt=180.4,ptPerInches=72.27):
+	"""Turns axes nice for publication.
+	
+	If ``adjustFigSize=True``, will also adjust the size the figure.
+	
+	Args:
+		ax (matplotlib.axes): A matplotlib axes.
+	Keyword Args:
+		adjustFigSize (bool): Adjust the size of the figure.
+		figWidthPt (float): Width of the figure in pt.
+		ptPerInches (float): Resolution in pt/inches.
+	
+	Returns:
+		matplotlib.axes: Modified matplotlib axes.
+	"""
+
+	params=getPubParms()
+	plt.rcParams.update(params)
+	ax=setPubAxis(ax)
+	setPubFigSize(ax.get_figure(),figWidthPt=figWidthPt)
+	ax=closerLabels(ax,padx=3,pady=1)
+	
+	return ax
+	
+
+def setPubAxis(ax):
+
+	"""Gets rid of top and right axis.
+	
+	Args:
+		ax (matplotlib.axes): A matplotlib axes.
+	
+	Returns:
+		matplotlib.axes: Modified matplotlib axes.
+	"""
+
+	ax.spines['top'].set_color('none')
+	ax.spines['right'].set_color('none')
+	ax.xaxis.set_ticks_position('bottom')
+	ax.yaxis.set_ticks_position('left')
+	return ax
+
+def setPubFigSize(fig,figWidthPt=180.4,ptPerInches=72.27):
+	
+	"""Adjusts figure size/aspect into golden ratio.
+	
+	Keyword Args:
+		figWidthPt (float): Width of the figure in pt.
+		ptPerInches (float): Resolution in pt/inches.
+	"""
+
+	inchesPerPt = 1.0/ptPerInches
+	goldenMean = (np.sqrt(5)-1.0)/2.0 # Aesthetic ratio
+	figWidth = figWidthPt*inchesPerPt # width in inches
+	figHeight = figWidth*goldenMean # height in inches
+	figSize = [figWidth,figHeight]
+	fig.set_size_inches(figSize[0],figSize[1])
+	fig.subplots_adjust(bottom=0.25)
+	fig.subplots_adjust(left=0.2)
+	fig.subplots_adjust(top=0.9)
+	return fig
+
+def closerLabels(ax,padx=10,pady=10):
+	
+	"""Moves x/y labels closer to axis."""
+	
+	ax.xaxis.labelpad = padx
+	ax.yaxis.labelpad = pady
+	return ax

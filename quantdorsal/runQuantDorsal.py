@@ -29,12 +29,14 @@ probThresh=0.5
 probIdx=0
 proj='max'
 bins=50
-debug=False
+debug=True
 bkgd=None
 minPix=10000
+median=None
+fitMethod='maxIntensity'
 
 #Flags what to do
-ilastik=True
+ilastik=False
 
 #Parse in filename
 fnIn=sys.argv[1]
@@ -44,6 +46,8 @@ images=im.readImageData(fnIn,nChannel=3,destChannel=0)
 
 #Save stacks to tifs
 prefix=os.path.basename(fnIn).replace(".zip.lif","")
+prefix=os.path.basename(fnIn).replace(".lif","")
+
 if prefix=="":
 	prefix="out"
 fnOut=os.path.dirname(fnIn)+"/"+prefix+"/"
@@ -76,7 +80,7 @@ for i,fn in enumerate(probFiles):
 	
 	#Generate angular distributions	
 	angles,signals=am.createSignalProfileFromH5(images[i],fn,signalChannel=signalChannel,probThresh=probThresh,probIdx=probIdx,
-					     proj=proj,bins=bins,bkgd=bkgd,minPix=minPix,median=3,debug=debug)
+					     proj=proj,bins=bins,bkgd=bkgd,minPix=minPix,median=median,debug=debug)
 
 	#Bookkeeping lists
 	anglesAligned=[]
@@ -88,16 +92,32 @@ for i,fn in enumerate(probFiles):
 	
 	#Align distributions
 	for j in range(len(angles)):
-		
-		if np.isnan(angles[j].max()):
+	
+		if bool(np.isnan(angles[j]).sum()):
 			printWarning("Had to exclude dataset "  + os.path.basename(tifFiles[i]) + " due to minPix requirement.")
 			continue
 		
-		#Align with maximum value
-		angleAligned,signalAligned=am.alignDorsal(angles[j],np.asarray([signals[j],signals[j]]))
-		anglesAligned.append(angleAligned)
-		signalsAligned.append(signalAligned[0,:])
+		if bool(np.isnan(signals[j]).sum()):
+			printWarning("Had to exclude dataset "  + os.path.basename(tifFiles[i]) + " due to minPix requirement.")
+			continue
+
 	
+	
+		#Align with maximum value
+		angleAligned,signalAligned=am.alignDorsal(angles[j],np.asarray([signals[j],signals[j]]),method=fitMethod)
+		
+		if len(signalAligned[0,:])==0:
+			printWarning("Had to exclude dataset "  + os.path.basename(tifFiles[i]) + " due to empty list problem.")
+		else:
+			anglesAligned.append(angleAligned)
+			signalsAligned.append(signalAligned[0,:])
+
+	try:
+		x=len(signalsAligned[-1])
+	except:
+		printWarning("Had to exclude dataset "  + os.path.basename(tifFiles[i]) + " due to empty list problem.")
+		continue
+
 	allAnglesAligned.append(anglesAligned)
 	allSignalsAligned.append(signalsAligned)
 	
@@ -116,6 +136,10 @@ for i in range(len(allAnglesAligned)):
 		
 		plt.draw()	
 
+#Save results
+results=np.asarray([allAnglesAligned,allSignalsAligned])
+np.save(fnOut+"distributions.npy",results)
+
 #Make stats figure
 meanSignal,stdSignal=am.getStats(allSignalsAligned)
 fig,axes=im.makeAxes([1,1])
@@ -132,11 +156,10 @@ axes[0].errorbar(allAnglesAligned[0][0], meanSignal, yerr=stdSignal)
 plt.draw()
 fig.savefig(fnOut+"statsFig.png")
 
-results=np.asarray([allAnglesAligned,allSignalsAligned])
 
 #Save results
 figAll.savefig(fnOut+"finalFig.png")
-np.save(fnOut+"distributions.npy",results)
+
 
 print "done"
 

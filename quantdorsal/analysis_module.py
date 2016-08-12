@@ -518,17 +518,9 @@ def getStats(signals):
 
 	"""
 	
-	#print type(signals), np.shape(signals)
-	#print np.shape(signals[0])
-	newSignals=[]
-	#for signal in signals:
-	#	newSignals.append(signal[1])
-	#signals=newSignals
+	
 	
 	signals=np.asarray(signals)
- 		
-	#print signals.shape
-	#raw_input()
 	stdSignal=np.std(signals,axis=0)
 	meanSignal=np.mean(signals,axis=0)
 
@@ -648,15 +640,15 @@ def alignDorsal(x,intensity,dorsal=0,phase=0,method='maxIntensity',opt=None):
 		if opt==None:
 			opt = 1     # fit with one Gaussian peak
         
-		guess = [0,np.amax(dosInt),1]
+		guess = [0,0,np.amax(dosInt),1]
 		if opt>1:
 			for i in range(1,opt):
 				guess += [i*2*np.pi/opt-np.pi,np.amax(dosInt)/opt,1]
         
 		popt, pcov = curve_fit(multGauss, x, dosInt, p0=guess)
         
-		c0 = np.array(popt[0::3])
-		w0 = np.array(popt[1::3])
+		c0 = np.array(popt[1::3])
+		w0 = np.array(popt[2::3])
 		cmax = c0[np.argmax(w0)]   # center of the strongest peak
 		while cmax>np.pi:    # addjust to -pi to pi
 			cmax = cmax-2*np.pi
@@ -667,6 +659,8 @@ def alignDorsal(x,intensity,dorsal=0,phase=0,method='maxIntensity',opt=None):
 		for i in range(opt):
 			ctemp = np.array([c0[i]-cmax,c0[i]-cmax+2*np.pi,c0[i]-cmax-2*np.pi])
 			c1[i] = cmax+ctemp[np.argmin(np.fabs(ctemp))]
+		
+		print np.shape(w0), np.shape(c1)
 		
 		shift = int(id0-int(round(np.average(c1, weights=w0)/dx))-np.floor(nx/2)) # weigted average of the Gaussian centers
 
@@ -689,9 +683,11 @@ def multGauss(x, *params):
 	"""
 	
 	y = np.zeros_like(x)
-	for i in range(0, len(params), 3):
+	for i in range(1, len(params), 3):
 		ctr = params[i]
 		amp = params[i+1]
 		wid = params[i+2]
 		y = y + amp * np.exp( -((x - ctr)/wid)**2)
+
+	y=params[0]+y
 	return y	

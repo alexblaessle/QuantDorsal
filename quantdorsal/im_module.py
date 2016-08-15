@@ -751,7 +751,7 @@ def getPubParms():
 	'ytick.labelsize': 10,
 	'text.usetex': True,
 	'font.family': 'sans-serif',
-'	font.sans-serif': 'Bitstream Vera Sans, Lucida Grande, Verdana, Geneva, Lucid, Arial, Helvetica, Avant Garde, sans-serif',
+	#'font.sans-serif': 'Bitstream Vera Sans, Lucida Grande, Verdana, Geneva, Lucid, Arial, Helvetica, Avant Garde, sans-serif',
 	#'ytick.direction': 'out',
 	'text.latex.preamble': [r'\usepackage{helvet}', r'\usepackage{sansmath}'] , #r'\sansmath',
 	}	

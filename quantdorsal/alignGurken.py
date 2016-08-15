@@ -46,6 +46,9 @@ anglesDouble=[]
 signalsSingle=[]
 signalsDouble=[]
 
+N=0
+Ndouble=0
+Nsingle=0
 for i in range(res.shape[1]):
 
 	if bool(np.isnan(res[0,i,0,:]).sum()):
@@ -60,8 +63,10 @@ for i in range(res.shape[1]):
 	
 	angles.append(res[0,i,0,:].copy())
 	signals.append(res[1,i,0,:].copy())
-	
+	N=N+1
 	if typ[i]==2:
+
+		Ndouble=Ndouble+1
 		if swap[i]==1:
 			anglesDouble.append(res[0,i,0,::-1].copy())
 		        signalsDouble.append(res[1,i,0,::-1].copy())
@@ -69,6 +74,7 @@ for i in range(res.shape[1]):
 			anglesDouble.append(res[0,i,0,:].copy())
                         signalsDouble.append(res[1,i,0,:].copy())
 	else:
+		Nsingle=Nsingle+1
 		anglesSingle.append(res[0,i,0,:].copy())
 		signalsSingle.append(res[1,i,0,:].copy())	
 
@@ -100,7 +106,9 @@ fig.show()
 ax=fig.add_subplot(111)
 ax.errorbar(angles[0],meanSignal,yerr=stdSignal)
 ax=im.turnAxesForPub(ax,figWidthPt=500)
-ax.set_title(fnOut)
+
+Nstring=" (N="+str(N)+")"
+ax.set_title(fnOut+Nstring)
 ax.set_ylabel("Intensity (AU)")
 ax.set_xlabel("Embryo Circumfarence (radians)")
 
@@ -123,7 +131,8 @@ ax=fig.add_subplot(111)
 ax.errorbar(angles[0],meanSignalSingle,yerr=stdSignalSingle)
 
 ax=im.turnAxesForPub(ax,figWidthPt=500)
-ax.set_title(fnOut)
+NString=" (N="+str(Nsingle)+")"
+ax.set_title(fnOut+NString)
 ax.set_ylabel("Intensity (AU)")
 ax.set_xlabel("Embryo Circumfarence (radians)")
 
@@ -173,7 +182,8 @@ fig.savefig(resFolder+fnOut+"_double_errorbar.eps")
 ax.plot(angles[0],bar,'k')
 
 ax=im.turnAxesForPub(ax,figWidthPt=500)
-ax.set_title(fnOut)
+NString=" (N="+str(Ndouble)+")"
+ax.set_title(fnOut+NString)
 ax.set_ylabel("Intensity (AU)")
 ax.set_xlabel("Embryo Circumfarence (radians)")
 
@@ -199,9 +209,9 @@ fig=plt.figure()
 fig.show()
 
 ax=fig.add_subplot(111)
-ax.plot(angles[0],1/meanSignal*stdSignal,'b',label="Overall")
-ax.plot(angles[0],1/meanSignalSingle*stdSignalSingle,'r',label="Single")
-ax.plot(angles[0],1/meanSignalDouble*stdSignalDouble,'g',label="Double")
+ax.plot(angles[0],1/meanSignal*stdSignal,'b')
+#ax.plot(angles[0],1/meanSignalSingle*stdSignalSingle,'r',label="Single")
+#ax.plot(angles[0],1/meanSignalDouble*stdSignalDouble,'g',label="Double")
 plt.legend()
 
 ax=im.turnAxesForPub(ax,figWidthPt=500)
@@ -218,6 +228,7 @@ ax.set_xticklabels(xlabel)
 
 
 plt.draw()
+fig.savefig(resFolder+fnOut+"_coeff.eps")
 
 for i in range(len(angles)):
 	fig=plt.figure()

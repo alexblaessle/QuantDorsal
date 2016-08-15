@@ -469,10 +469,12 @@ def showProfileDebugPlots(img,mask,maskedImg,idx,signal,angle,xEll,yEll,channelI
 	axes[0,0].imshow(img[0,idx])
 	axes[0,0].set_title("Dapi Channel")
 	axes[0,1].imshow(img[1,channelIdx])
+	axes[0,1].set_title("Signal Channel")
 	axes[1,0].imshow(mask[idx])
+	axes[1,0].set_title("Mask")
 	axes[1,1].imshow(maskedImg[idx])
+	axes[1,1].set_title("Maksed signal")
 	axes[1,0].plot(xEll,yEll,'g')
-	axes[2,0].imshow(maskedImg[idx])
 	axes[2,1].plot(angle,signal,'r')
 	
 	plt.draw()

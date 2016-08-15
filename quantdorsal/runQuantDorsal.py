@@ -36,7 +36,7 @@ median=None
 fitMethod='maxIntensity'
 
 #Flags what to do
-ilastik=False
+ilastik=True
 
 #Parse in filename
 fnIn=sys.argv[1]
@@ -46,7 +46,8 @@ images=im.readImageData(fnIn,nChannel=3,destChannel=0)
 
 #Save stacks to tifs
 prefix=os.path.basename(fnIn).replace(".zip.lif","")
-prefix=os.path.basename(fnIn).replace(".lif","")
+prefix=os.path.basename(prefix).replace(".lif","")
+prefix=os.path.basename(prefix).replace(".zip","")
 
 if prefix=="":
 	prefix="out"

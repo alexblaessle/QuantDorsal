@@ -1,0 +1,1 @@
+"""Short script to fix filenames."""

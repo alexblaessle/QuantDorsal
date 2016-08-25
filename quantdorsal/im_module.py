@@ -57,7 +57,10 @@ def readImageData(fn,nChannel=3,destChannel=0):
 		destChannel (int): Axis where channels should go to.
 		
 	Returns:
-		list: List of loaded images.
+		tuple: Tuple containing:
+		
+			* images (list): List of loaded images.
+			* fnsLoaded (list): List of filenames that were loaded.
 	
 	"""
 	
@@ -65,30 +68,30 @@ def readImageData(fn,nChannel=3,destChannel=0):
 	
 	#If folder, use folder function
 	if os.path.isdir(fn):
-		images=readAllTiffsInFolder(fn)
-	
+		fn=os.path.join(fn, '')
+		images,fnsLoaded=readAllFilesInFolder(fn)
+		
 	else:
 		#If tif, load tif
 		if fn.endswith(".tif"):
 			img=loadImg(fn)
 			images=[img]
+			fnsLoaded=[fn]
 			
 		#Otherwise, just try bioformat	
 		else:
-			images,meta=readBioFormats(fn)
+			images,meta,fnsLoaded=readBioFormats(fn)
 			
 	#Make sure that channels are in first axis
 	newImages=[]
 	for img in images:
-		#print type(img)
-		#print np.shape(img)
 		
 		img=sortChannel(img,nChannel,destChannel=destChannel)		
 		newImages.append(img)
 		
-	return newImages
+	return newImages,fnsLoaded
 
-def readAllTiffsInFolder(fnFolder):
+def readAllFilesInFolder(fnFolder):
 	
 	"""Loads all tiff files in folder.
 	
@@ -96,35 +99,54 @@ def readAllTiffsInFolder(fnFolder):
 		fnFolder (str): Path to folder.
 		
 	Returns:
-		list: List of loaded images.
+		tuple: Tuple containing:
+		
+			* images (list): List of loaded images.
+			* fnsLoaded (list): List of filenames that were loaded.
 	
 	"""
 	
 	#Get files in folder
 	files=os.listdir(fnFolder)
 	
-	#files.sort()
+	#Sort files
+	files.sort()
 	
 	#Result list
 	images=[]
+	fnsLoaded=[]
 	
 	#Loop through files
 	for f in files:
+		
+		#Check which filetype
 		if f.endswith('.tif'):
-			print fnFolder+f	
+			
 			#Load image
 			try:
 				img=tifffile.imread(fnFolder+f)
-				print "Successfully loaded ", fnFolder+f 
 				images.append(img)
-
+				fnsLoaded.append(fnFolder+f)
+				
+				print "Successfully loaded ", fnFolder+f
+				
+			except:
+				printWarning("Could not load file "+ fnFolder+f)
+		else:
+			
+			if os.path.isdir(fnFolder+f):
+				continue
+			
+			#If not tif, try bioformats instead
+			try:
+				imagesNew,meta,fnsLoadededNew=readBioFormats(fnFolder+f)
+				images=images+imagesNew
+				fnsLoaded=fnsLoaded+fnsLoadededNew
+				print "Successfully loaded ", fnFolder+f
 			except:
 				printWarning("Could not load file "+ fnFolder+f)
 				
-
-			
-					
-	return images
+	return images,fnsLoaded
 	
 def loadImg(fn,enc,dtype='float'):
 	
@@ -223,7 +245,10 @@ def saveImageSeriesToStacks(images,fnFolder,prefix="",axes='ZYX',channel=0,debug
 	for i,img in enumerate(images):
 		
 		#Build save string
-		fnSave=fnFolder+prefix+"_series"+getEnumStr(i,len(images))+"_c"+getEnumStr(channel,img.shape[0])+".tif"
+		if len(images)>1:
+			fnSave=fnFolder+prefix+"_series"+getEnumStr(i,len(images))+"_c"+getEnumStr(channel,img.shape[0])+".tif"
+		else:
+			fnSave=fnFolder+prefix+".tif"
 		
 		#Save to stack
 		saveSingleStackFile(img[channel],fnSave,axes=axes)
@@ -369,6 +394,7 @@ def readBioFormats(fn,debug=True):
 		
 			* images (list): List of datasets
 			* meta (OMEXML): meta data of all data.
+			* fnsLoaded (list): List of filenames that were loaded.
 	
 	"""
 	
@@ -378,6 +404,7 @@ def readBioFormats(fn,debug=True):
 	
 	#Empty list to put datasets in	
 	images=[]
+	fnsLoaded=[]
 	
 	#Open with reader class
 	with bioformats.ImageReader(fn) as reader:
@@ -408,11 +435,13 @@ def readBioFormats(fn,debug=True):
 			
 			#Append to list of datasets and converts it to numpy array
 			images.append(np.asarray(channels))
+			fnsLoaded.append(fn)
 	
+			
 	#Kill java VM
 	javabridge.kill_vm()
 	
-	return images,meta
+	return images,meta,fnsLoaded
 
 def checkProblematicStacks(reader,meta,imageIdx,debug=True):
 	
@@ -692,138 +721,3 @@ def scaleToEnc(img,enc,maxVal=None):
 	img=img.astype(enc)
 	
 	return img
-
-def imshow(img):
-	
-	"""Shows image data.
-
-	If image data is multichannel, will show channels seperately.
-
-	"""	
-
-	fig=plt.figure()
-	
-	if len(img.shape)>2:
-		fig,axes=makeAxes([np.ceil(img.shape[0]/3.),3])
-		
-		for i in range(img.shape[0]):
-			axes[i].imshow(img[i])
-			plt.draw()
-	else:
-		fig,axes=makeAxes([1,1])
-
-	return axes
-
-		
-		
-def makeAxes(size):
-	
-	"""Makes figure with size subplots."""
-
-	fig=plt.figure()
-	fig.show()
-	axes=[]	
-	print size
-	for i in range(int(size[0])*int(size[1])):
-
-		axes.append(fig.add_subplot(size[0],size[1],i))
-
-	return fig,axes
-
-
-def getPubParms():
-	"""Returns dictionary with good parameters for nice
-	publication figures.
-
-	Resulting ``dict`` can be loaded via ``plt.rcParams.update()``.
-	
-	.. note:: Use this if you want to include LaTeX symbols in the figure.
-	
-	Returns:	
-		dict: Parameter dictionary.
-	"""
-
-	params = {'backend': 'ps',
-	'axes.labelsize': 10,
-	'text.fontsize': 10,
-	'legend.fontsize': 10,
-	'xtick.labelsize': 10,
-	'ytick.labelsize': 10,
-	'text.usetex': True,
-	'font.family': 'sans-serif',
-	#'font.sans-serif': 'Bitstream Vera Sans, Lucida Grande, Verdana, Geneva, Lucid, Arial, Helvetica, Avant Garde, sans-serif',
-	#'ytick.direction': 'out',
-	'text.latex.preamble': [r'\usepackage{helvet}', r'\usepackage{sansmath}'] , #r'\sansmath',
-	}	
-	return params
-
-
-def turnAxesForPub(ax,adjustFigSize=True,figWidthPt=180.4,ptPerInches=72.27):
-	"""Turns axes nice for publication.
-	
-	If ``adjustFigSize=True``, will also adjust the size the figure.
-	
-	Args:
-		ax (matplotlib.axes): A matplotlib axes.
-	Keyword Args:
-		adjustFigSize (bool): Adjust the size of the figure.
-		figWidthPt (float): Width of the figure in pt.
-		ptPerInches (float): Resolution in pt/inches.
-	
-	Returns:
-		matplotlib.axes: Modified matplotlib axes.
-	"""
-
-	params=getPubParms()
-	plt.rcParams.update(params)
-	ax=setPubAxis(ax)
-	setPubFigSize(ax.get_figure(),figWidthPt=figWidthPt)
-	ax=closerLabels(ax,padx=3,pady=1)
-	
-	return ax
-	
-
-def setPubAxis(ax):
-
-	"""Gets rid of top and right axis.
-	
-	Args:
-		ax (matplotlib.axes): A matplotlib axes.
-	
-	Returns:
-		matplotlib.axes: Modified matplotlib axes.
-	"""
-
-	ax.spines['top'].set_color('none')
-	ax.spines['right'].set_color('none')
-	ax.xaxis.set_ticks_position('bottom')
-	ax.yaxis.set_ticks_position('left')
-	return ax
-
-def setPubFigSize(fig,figWidthPt=180.4,ptPerInches=72.27):
-	
-	"""Adjusts figure size/aspect into golden ratio.
-	
-	Keyword Args:
-		figWidthPt (float): Width of the figure in pt.
-		ptPerInches (float): Resolution in pt/inches.
-	"""
-
-	inchesPerPt = 1.0/ptPerInches
-	goldenMean = (np.sqrt(5)-1.0)/2.0 # Aesthetic ratio
-	figWidth = figWidthPt*inchesPerPt # width in inches
-	figHeight = figWidth*goldenMean # height in inches
-	figSize = [figWidth,figHeight]
-	fig.set_size_inches(figSize[0],figSize[1])
-	fig.subplots_adjust(bottom=0.25)
-	fig.subplots_adjust(left=0.2)
-	fig.subplots_adjust(top=0.9)
-	return fig
-
-def closerLabels(ax,padx=10,pady=10):
-	
-	"""Moves x/y labels closer to axis."""
-	
-	ax.xaxis.labelpad = padx
-	ax.yaxis.labelpad = pady
-	return ax

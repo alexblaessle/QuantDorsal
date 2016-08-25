@@ -459,6 +459,8 @@ def createSignalProfile(maskedImg,mask,img,signalChannel=1,bins=None,bkgd=None,d
 			
 	return angles,signals	
 
+
+
 def showProfileDebugPlots(img,mask,maskedImg,idx,signal,angle,xEll,yEll,channelIdx,axes=None):
 	
 	"""Shows some debugging plots."""
@@ -693,3 +695,64 @@ def multGauss(x, *params):
 
 	y=params[0]+y
 	return y	
+
+
+def filterNaNArray(arr):
+	return bool(np.isnan(arr).sum())
+
+def findPeaks(angles,signals,angleDist,N,debug=False):
+	
+	#Find n largest signals
+	idx=signals.argsort[-N:]
+	
+	#Get angles at maximum
+	anglesMax=angles[idx]
+	signalsMax=signals[idx]
+	
+	#Compute distances and find the ones that enough apart
+	idxDist=np.where(np.diff(anglesMax)>angleDist)[0]
+	
+	anglesFinal=[]
+	signalsFinal=[]
+	for i in idxDist:
+		anglesFinal.append(anglesMax[i],anglesMax[i+1])
+		signalsFinal.append(signalsMax[i],signalsMax[i+1])
+		
+	anglesFinal=np.unique(anglesFinal)
+	signalsFinal=np.unique(signalsFinal)
+	
+	return anglesFinal,signalsFinal
+
+def hasDoublePeak(angles,signals,angleDist,debug=False):
+	
+	angles,signal=findPeaks(angles,signals,angleDist,2,debug=debug)
+	
+	return len(angles)==2
+
+def turnDoublePeak(angles,signals,angleDist,debug=False,centerInMiddle=True):
+	
+	anglesMax,signalMax=findPeaks(angles,signals,angleDist,2,debug=debug)
+	
+	if len(anglesMax)==2:
+		if anglesMax[1]>0:
+			
+			if debug:
+				printNote("There are two peaks, second peak right of 0, going to flip.")
+			#Second peak is larger than 0,
+			#so flip around
+			angles=angles[::-1]
+			signals=signals[::-1]
+		else:
+			printNote("There are two peaks, second peak right at 0, not going to flip.")
+		
+		if centerInMiddle:
+			shift=np.where(anglesMax[0]+abs(anglesMax[1]-anglesMax[0]))[0][0]
+			signals=np.roll(signals,shift)
+	if debug:
+		printNote("There aren't two peaks, doing nothing.")
+	
+	return signals
+
+	
+	
+	

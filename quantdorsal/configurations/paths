@@ -1,1 +1,11 @@
-ilastikBin=/home/streicha/temp/ilastik-1.2.0rc7-Linux/./run_ilastik.sh
+#The purpose of this file is to tell quantDorsal where it can
+#find external binaries such as ilastik.
+#Paths are generally defined by
+#
+#pathIdentifier=path 
+#
+#For more information, look at misc_module.getPath in the quantDorsal API.
+
+#ilastikBin=/home/streicha/temp/ilastik-1.2.0rc7-Linux/./run_ilastik.sh
+ilastikBin=/home/alex_loc/Documents/Courses/KITP_QBio/ilastik-1.2.0rc7-Linux/run_ilastik.sh
+lastOpen=/home/alex_loc/Documents/Courses/KITP_QBio/QuantDorsal/testdata/temp

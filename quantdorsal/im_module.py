@@ -656,7 +656,6 @@ def meanIntProj(img,axis):
 def maskZeroToNaN(img):
 
 	"""Replaces all zeros in image with NaN.
-	
 	"""
 	
 	img[np.where(img==0)]=np.nan
@@ -666,7 +665,6 @@ def maskZeroToNaN(img):
 def maskNaNToZero(img):
 
 	"""Replaces all NaNs in image with zeros.
-	
 	"""
 	
 	img[np.where(np.isnan(img))]=0.

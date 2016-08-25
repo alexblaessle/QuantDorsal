@@ -218,6 +218,16 @@ def closerLabels(ax,padx=10,pady=10):
 
 def turnIntoRadialPlot(ax):
 	
+	"""Adjusts labels of plot for radial plot.
+	
+	Args:
+		ax (matplotlib.axes): Axes to be adjusted.
+		
+	Returns:
+		matplotlib.axes: Adjusted axes.
+	
+	"""
+	
 	ax=setRadiansTicks(ax)
 	ax=setRadianLabels(ax)
 	
@@ -226,7 +236,15 @@ def turnIntoRadialPlot(ax):
 
 def setRadiansTicks(ax):
 	
-	"""Sets x-labels to radians from -pi to pi."""
+	"""Sets x-labels to radians from -pi to pi.
+	
+	Args:
+		ax (matplotlib.axes): Axes to be adjusted.
+		
+	Returns:
+		matplotlib.axes: Adjusted axes.
+	
+	"""
 	
 	xtick = np.linspace(-np.pi, np.pi, 5)
 	xlabel = [r"$-\pi$", r"$-\frac{\pi}{2}$", r"$0$", r"$+\frac{\pi}{2}$",   r"$+\pi$"]
@@ -237,7 +255,15 @@ def setRadiansTicks(ax):
 
 def setRadianLabels(ax):
 	
-	"""Sets default labels for radial plots."""
+	"""Sets default labels for radial plots.
+	
+	Args:
+		ax (matplotlib.axes): Axes to be adjusted.
+		
+	Returns:
+		matplotlib.axes: Adjusted axes.
+	
+	"""
 
 	ax.set_ylabel("Intensity (AU)")
 	ax.set_xlabel("Embryo Circumfarence (radians)")

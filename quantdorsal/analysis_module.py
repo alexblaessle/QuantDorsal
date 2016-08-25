@@ -74,7 +74,13 @@ def fitEllipse(x,y):
 	
 	"""Fits ellipse to x,y coordinates, similiar to matlabs fitEllipse.
 	
-
+	Args:
+		x (numpy.ndarray): x-coordinates.
+		y (numpy.ndarray): y-coordinates.
+		
+	Returns:
+		numpy.ndarray: Array of numbers describing ellipse.
+		
 	"""
 	
 	x = x[:,np.newaxis]
@@ -92,7 +98,15 @@ def fitEllipse(x,y):
 
 def ellipseCenter(a):
 	
-	"""Returns center of ellipse."""
+	"""Returns center of ellipse.
+	
+	Args:
+		a (numpy.ndarray): Ellipse array.
+		
+	Returns:
+		numpy.ndarray: Center of ellipse
+		
+	"""
 	
 	b,c,d,f,g,a = a[1]/2, a[2], a[3]/2, a[4]/2, a[5], a[0]
 	num = b*b-a*c
@@ -103,7 +117,14 @@ def ellipseCenter(a):
 
 def ellipseAngleOfRotation(a):
 	
-	"""Returns anglular rotation of ellipse."""
+	"""Returns anglular rotation of ellipse.
+	
+	Args:
+		a (numpy.ndarray): Ellipse array.
+			
+	Returns:
+		float: Rotation of ellipse.
+	"""
 	
 	b,c,d,f,g,a = a[1]/2, a[2], a[3]/2, a[4]/2, a[5], a[0]
 	return 0.5*np.arctan(2*b/(a-c))
@@ -111,7 +132,15 @@ def ellipseAngleOfRotation(a):
 
 def ellipseAxisLength(a):
 	
-	"""Returns length of axis of ellipse."""
+	"""Returns length of axis of ellipse.
+	
+	Args:
+		a (numpy.ndarray): Ellipse array.
+	
+	Returns:
+		numpy.ndarray: Eccentricities
+	
+	"""
 	
 	b,c,d,f,g,a = a[1]/2, a[2], a[3]/2, a[4]/2, a[5], a[0]
 	up = 2*(a*f*f+c*d*d+g*b*b-2*b*d*f-a*c*g)
@@ -123,6 +152,21 @@ def ellipseAxisLength(a):
 	return np.array([res1, res2])
 
 def decodeEllipse(ell):
+	
+	"""Decodes ellipse properties from result array of
+	fitEllipse.
+	
+	Args:
+		ell (numpy.ndarray): Ellipse array.
+		
+	Returns:
+		tuple: Tuple containing:
+		
+			* center (numpy.ndarray): Center of ellipse.
+			* rot (float): Rotation of the ellipse.
+			* lengths (numpy.ndarray): Eccentricities of ellipse.
+	
+	"""
 
 	center=ellipseCenter(ell)
 	lengths=ellipseAxisLength(ell)
@@ -295,7 +339,19 @@ def fitEllipseToMask(mask):
 def normImg(img,signalChannel,normChannel=0,offset=0.01):
 	
 	"""Norms data in channel signalChannel by
-	the one in normChannel."""
+	the one in normChannel.
+	
+	.. note:: Channels need to be first axis in ``img``.
+	
+	Args:
+		img (numpy.ndarray): Multichannel image. 
+		signalChannel (int): Index of channel to be normed.
+		
+	Keyword Args:
+		normChannel (int): Channel used for norming.
+		offset (float): Offset to avoid singularities.
+		
+	"""
 	
 	img[signalChannel]=(img[signalChannel]+offset)/(img[normChannel]+offset)
 	
@@ -681,7 +737,7 @@ def alignDorsal(x,intensity,dorsal=0,phase=0,method='maxIntensity',opt=None):
 	
 def multGauss(x, *params):
     
-	""" Function of multiple gaussian distribution 
+	"""Function of multiple gaussian distribution 
 		
 	check: http://stackoverflow.com/questions/26902283/fit-multiple-gaussians-to-the-data-in-python
 	"""
@@ -698,9 +754,39 @@ def multGauss(x, *params):
 
 
 def filterNaNArray(arr):
+	
+	"""Checks if there is a NaN entry in array.
+	
+	Args:
+		arr (numpy.ndarray): Array.
+		
+	Returns:
+		bool: True if NaN is in array.
+	
+	"""
+	
 	return bool(np.isnan(arr).sum())
 
 def findPeaks(angles,signals,angleDist,N,debug=False):
+	
+	"""Finds distinct peaks in profiles.
+	
+	Args:
+		angles (numpy.ndarray): Angle array of signal.
+		signals (numpy.ndarray): Signal array.
+		angleDist (float): Angle in radians that peaks need to be apart.
+		N (int): Number of peaks to look for.
+		
+	Keyword Args:
+		debug (bool): Print debugging messages.
+		
+	Returns:
+		tuple: Tuple containing: 
+		
+			* anglesFinal (numpy.ndarray): Angles of peaks.
+			* signalsFinal (numpy.ndarray): Signals of peaks.
+			
+	"""
 	
 	#Find n largest signals
 	idx=signals.argsort[-N:]
@@ -725,11 +811,44 @@ def findPeaks(angles,signals,angleDist,N,debug=False):
 
 def hasDoublePeak(angles,signals,angleDist,debug=False):
 	
+	"""Checks if signals has 2 distinct peaks in profiles.
+	
+	Args:
+		angles (numpy.ndarray): Angle array of signal.
+		signals (numpy.ndarray): Signal array.
+		angleDist (float): Angle in radians that peaks need to be apart.
+		
+	Keyword Args:
+		debug (bool): Print debugging messages.
+		
+	Returns:
+		bool: True if double peak.	
+	
+	"""
+	
+	
 	angles,signal=findPeaks(angles,signals,angleDist,2,debug=debug)
 	
 	return len(angles)==2
 
 def turnDoublePeak(angles,signals,angleDist,debug=False,centerInMiddle=True):
+	
+	"""Checks if signal has 2 distinct peaks in profiles, if so, flips
+	them such that they are aligned.
+	
+	Args:
+		angles (numpy.ndarray): Angle array of signal.
+		signals (numpy.ndarray): Signal array.
+		angleDist (float): Angle in radians that peaks need to be apart.
+		
+	Keyword Args:
+		debug (bool): Print debugging messages.
+		centerInMiddle (bool): Move valley between peaks to 0.
+		
+	Returns:
+		numpy.ndarray: Newly aligned signal array.
+	
+	"""
 	
 	anglesMax,signalMax=findPeaks(angles,signals,angleDist,2,debug=debug)
 	

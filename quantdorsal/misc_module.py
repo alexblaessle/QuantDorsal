@@ -171,7 +171,18 @@ def copyObjAttr(obj1,obj2,filterAttr=[],debug=False):
 	
 	"""Copies all attributes in obj1 into obj2, leaving
 	out all attributes with names defined in filterAttr.
-
+	
+	Args:
+		obj1 (object): Source object.
+		obj2 (object): Destination object.
+		
+	Keyword Args:
+		filterAttr (list): List of attributes to be left out of copying.
+		debug (bool): Print debugging messages.
+	
+	Returns:
+		object: Updated obj2.
+	
 	"""
 	
 	

@@ -128,7 +128,7 @@ class MainWindow(QtGui.QMainWindow):
 		alignSignalsButton = QtGui.QAction('Align signal profiles', self)
 		self.connect(alignSignalsButton, QtCore.SIGNAL('triggered()'), self.alignSignalProfiles)
 		
-		runAnalysisButton = QtGui.QAction('Edit Analysis', self)
+		runAnalysisButton = QtGui.QAction('Run Analysis', self)
 		self.connect(runAnalysisButton, QtCore.SIGNAL('triggered()'), self.runAnalysis)
 		
 		self.mbAnalysis.addAction(editAnalysisButton)
@@ -396,7 +396,7 @@ class MainWindow(QtGui.QMainWindow):
 			return
 		
 		nameMask, ok = QtGui.QInputDialog.getText(self, 'Input Dialog',
-					'Name of signal channel:')
+					'Name of mask channel:')
 		nameMask=str(nameMask)
 		if not ok:
 			return

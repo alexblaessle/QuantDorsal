@@ -95,7 +95,15 @@ def runIlastik(files,fnOut=None,classFile="classifiers/quantDorsalDefault.ilp",c
 
 def getIlastikBin(fnPath=None):
 	
-	"""Returns path to ilastik binary."""
+	"""Returns path to ilastik binary.
+	
+	Keyword Args:
+		fnPath (str): Path to paths file.
+		
+	Returns:
+		str: Path to ilastik binary.
+		
+	"""
 	
 	return mm.getPath('ilastikBin',fnPath=fnPath)
 
@@ -164,7 +172,15 @@ def getH5FilesFromFolder(fn):
 def filterBrokenH5(probFiles,tifFiles):
 	
 	"""Checks if a probFile exist for each tifFile, if not
-	remembers the index."""
+	remembers the index.
+	
+	Args:
+		probFiles (list): List of probability files.
+		tifFiles (list): List of tif files.
+		
+	Returns:
+		list: List of broken indices.
+	"""
 
 	brokenIdx=[]
 		

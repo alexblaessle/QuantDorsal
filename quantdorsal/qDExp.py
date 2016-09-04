@@ -191,12 +191,28 @@ class experiment:
 	
 	def createChannelSignalProfile(self,channel,maskChannel,debug=False):
 		
+		"""Creates signal profile for given channel.
+		
+		Args:
+			channel (str): Name of channel for which signal profiles should be created. 
+			maskChannel (str): Name of channel used for masking. 
+		
+		Keyword Args:
+			debug (bool): Print debugging messages.
+		
+		
+		"""
+		
 		channel=self.getChannel(channel)
 		angles,signals=channel.createSignalProfile(maskChannel,debug=False)
 		
 		return angles,signals
 	
 	def getChannelNames(self):
+		
+		"""Returns list of names of all channels.
+		"""
+		
 		names=[]
 		for channel in self.channels:
 			names.append(channel.name)
@@ -253,6 +269,17 @@ class channel:
 		
 	def applyMedianFilter(self,img=None):
 		
+		"""Applies median filter to image data of channel.
+		
+		If no image data is given, will use ``img=self.exp.image``.
+		
+		Keyword Args:
+			img (numpy.ndarray): Image data. 
+		
+		Returns:
+			numpy.ndarray: Modified image.
+		"""
+		
 		if img==None:
 			img=self.exp.image.copy()
 		
@@ -260,6 +287,28 @@ class channel:
 		return img
 	
 	def zProjection(self,img=None,proj=None,axis=1):
+		
+		"""Performs z-Projection on image data of channel.
+		
+		If no image data is given, will use ``img=self.exp.image``.
+		
+		If ``proj=None``, will not perform any projection.
+		
+		Available projections:
+		
+			* ``proj=max``: Maximum intensity.
+			* ``proj=sum``: Sum intensity.
+			* ``proj=mean``: Mean intensity.
+			
+		Keyword Args:
+			img (numpy.ndarray): Image data. 
+			proj (str): Type of projection.
+			axis (int): Axis to perform projection along.
+			
+		Returns:
+			numpy.ndarray: Modified image.
+		"""
+		
 		
 		if img==None:
 			img=self.exp.image.copy()
@@ -281,6 +330,18 @@ class channel:
 	
 	def maskImg(self,maskChannel,img=None):
 		
+		"""Masks image data of channel.
+		
+		If no image data is given, will use ``img=self.exp.image``.
+		
+		Keyword Args:
+			maskChannel (str): Name of channel used for masking.
+		
+		Returns:
+			numpy.ndarray: Masked image.
+		
+		"""
+		
 		if img==None:
 			img=self.exp.image.copy()
 		
@@ -295,6 +356,22 @@ class channel:
 	
 	def createSignalProfile(self,maskChannel,debug=False):
 		
+		"""Creates signal profile for channel.
+		
+		Args:
+			maskChannel (str): Name of channel used for masking. 
+		
+		Keyword Args:
+			debug (bool): Print debugging messages.
+			
+		Returns:
+			tuple: Tuple containing: 
+			
+				* angles (numpy.ndarray): List of angle arrays.
+				* signals (numpy.ndarray): List of signal arrays.
+				
+		"""
+	
 		#Get channel used for masking
 		maskChannel=self.exp.getChannel(maskChannel)
 		
@@ -364,7 +441,21 @@ class channel:
 		return
 				
 	def plotSignal(self,ax=None,color='r',lw=1.,title=""):
-
+		
+		"""Plots signal along radial axis.
+		
+		.. note:: Will create new axes if not specified.
+			
+		Keyword Args:
+			ax (matplotlib.axes): Axes used for plotting.
+			color (str): Color of plot.
+			lw (float): Linewidth of plot.
+			title (str): Title of plot.
+			
+		Returns:
+			matplotlib.axes: Axes used for plotting.
+		"""
+		
 		if ax==None:
 			fig,axes=pm.makeAxes([1,1])
 			ax=axes[0]
@@ -381,6 +472,21 @@ class channel:
 		return ax	
 			
 	def plotAlignedSignal(self,ax=None,color='r',lw=1.,title=""):
+
+		"""Plots aligned signal along radial axis.
+		
+		.. note:: Will create new axes if not specified.
+			
+		Keyword Args:
+			ax (matplotlib.axes): Axes used for plotting.
+			color (str): Color of plot.
+			lw (float): Linewidth of plot.
+			title (str): Title of plot.
+			
+		Returns:
+			matplotlib.axes: Axes used for plotting.
+		"""
+		
 
 		if ax==None:
 			fig,axes=pm.makeAxes([1,1])
@@ -399,13 +505,41 @@ class channel:
 	
 	def turnDoublePeak(self,anglesDist,debug=False,centerInMiddle=True):
 		
-		signals=turnDoublePeak(self.anglesAligned,self.signalsAligned,angleDist,debug=debug,centerInMiddle=centerInMiddle)
+		"""Checks if signal has 2 distinct peaks in profiles, if so, flips
+		them such that they are aligned.
+		
+		Args:
+			angleDist (float): Angle in radians that peaks need to be apart.
+			
+		Keyword Args:
+			debug (bool): Print debugging messages.
+			centerInMiddle (bool): Move valley between peaks to 0.
+			
+		Returns:
+			numpy.ndarray: Newly aligned signal array.
+		
+		"""
+		
+		signals=am.turnDoublePeak(self.anglesAligned,self.signalsAligned,angleDist,debug=debug,centerInMiddle=centerInMiddle)
 		self.signalsAligned=signals
 		
 		return self.signalsAligned
 	
 	def hasDoublePeak(self,angleDist,debug=False):
-
+		
+		"""Checks if signals has 2 distinct peaks in profiles.
+	
+		Args:
+			angleDist (float): Angle in radians that peaks need to be apart.
+			
+		Keyword Args:
+			debug (bool): Print debugging messages.
+			
+		Returns:
+			bool: True if double peak.	
+		
+		"""
+		
 		return hasDoublePeak(self.anglesAligned,self.signalsAligned,angleDist,debug=debug)
 	
 	

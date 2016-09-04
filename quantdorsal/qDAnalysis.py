@@ -1,3 +1,16 @@
+#===========================================================================================================================================================================
+#Module description
+#===========================================================================================================================================================================
+
+"""QuantDorsal module for analysis object. 
+
+"""
+
+#===========================================================================================================================================================================
+#Importing necessary modules
+#===========================================================================================================================================================================
+
+# Quant dorsal modules
 import im_module as im
 import analysis_module as am
 import io_module as iom
@@ -5,12 +18,32 @@ from term_module import *
 import plot_module as pm
 from qDExp import experiment
 
+# OS
 import os
 
-
+# Numpy 
 import numpy as np
 
+#===========================================================================================================================================================================
+#Class definitions
+#===========================================================================================================================================================================
+
 class analysis:
+
+	"""Analysis object for QD toolbox. 
+	
+	Basically is a container for all experiments done for one particular sample/phenotype, 
+	also saves flags on what to do if analysis is run. Flags are:
+	
+		* ``align``: Align peaks.
+		* ``saveTif``: Save channels to tif.
+		* ``ilastik``: Run ilastik.
+	
+	Also saves method used for aligning peaks, ``fitMethod``.
+	
+	Experiments are saved in ``exps`` list.
+	
+	"""
 
 	def __init__(self,name):
 
@@ -26,12 +59,35 @@ class analysis:
 		
 	def addExp(self,image,fn,series):
 		
+		"""Creates new experiment and adds it to experiment list.
+		
+		Args:
+			image (numpy.ndarray): Image.
+			fn (str): Filename of original file.
+			series (int): Number of experiment.
+		
+		Returns:
+			list: Updated list of experiments.
+		
+		"""
+		
 		newExp=experiment(fn,image,series)	
 		self.exps.append(newExp)
 		
 		return self.exps
 	
 	def loadData(self,images,fns):
+		
+		"""Takes list of image data and assigns it to experiment objects.
+		
+		Args:
+			images (list): List of image data.
+			fns: (list): List of filenames.
+		
+		Returns:
+			list: Updated list of experiments.
+		
+		"""
 		
 		#Check input
 		if len(images)!=len(fns):
@@ -46,6 +102,23 @@ class analysis:
 	
 	def loadImageData(self,fn,nChannel=3,destChannel=0):
 		
+		"""Loads image data from either a single file or folder.
+		
+		Loads image data and then calls :py:func:`loadData` to add 
+		loaded data into experiments.
+		
+		Args:
+			fn (str): Source file or folder.
+			nChannel(int): Number of channels of files.
+			destChannel (int): Index in array where channels should go.
+		
+		Returns:
+			list: Updated list of experiments.
+		
+		
+		"""
+		
+		
 		#Load data
 		images,fnsLoaded=im.readImageData(fn,nChannel=nChannel,destChannel=destChannel)
 		
@@ -53,6 +126,23 @@ class analysis:
 		return self.loadData(images,fnsLoaded)
 		
 	def saveChannelToTif(self,fnOut,channel,prefix="",axes='ZYX',debug=True):
+		
+		"""Saves image data of a specific channel to tif files for all 
+		experiments.
+		
+		Args:
+			fnOut (str): Path where tif files are supposed to be put.
+			channel (str): Name of channel to be saved. 
+		
+		Keyword Args:
+			prefix (str): Prefix string for filename.
+			axes (str): Order of axis of image.
+			debug (bool): Print debugging messages.
+			
+		Returns: 
+			list: List of written tif files.
+		
+		"""
 		
 		tifFiles=[]
 		for exp in self.exps:
@@ -63,6 +153,25 @@ class analysis:
 		
 	def saveDapiChannelToTif(self,fnOut,prefix="",axes='ZYX',debug=True):
 		
+		"""Saves image data of Dapi channel to tif files for all 
+		experiments.
+		
+		.. note:: If Dapi channel can't be found, will not do anything.
+		
+		Args:
+			fnOut (str): Path where tif files are supposed to be put.
+			channel (str): Name of channel to be saved. 
+		
+		Keyword Args:
+			prefix (str): Prefix string for filename.
+			axes (str): Order of axis of image.
+			debug (bool): Print debugging messages.
+			
+		Returns: 
+			list: List of written tif files.
+		
+		"""
+		
 		tifFiles=[]
 		for exp in self.exps:
 			tf=exp.saveDapiChannelToTif(fnOut,prefix=prefix,axes=axes,debug=debug)
@@ -71,6 +180,17 @@ class analysis:
 		return tifFiles
 	
 	def runIlastik(self,channel):
+		
+		"""Runs ilastik on specific channel for all experiments.
+		
+		Args:
+			channel (str): Name of channel to be run. 
+			
+		Returns:
+			list: List of written h5 files.
+		
+		
+		"""
 		
 		h5files=[]
 		for exp in self.exps:
@@ -81,17 +201,37 @@ class analysis:
 	
 	def findCorrespondingH5Files(self,channel):
 		
+		"""Finds corresponding h5 files to tif files specified in channels
+		object for all experiments.
+		
+		Args:
+			channel (str): Name of channel. 
+		
+		"""
+		
 		for exp in self.exps:
 			exp.getChannel(channel).findCorrespondingH5File()
 			
 	def createAllSignalProfiles(self,signalChannel,maskChannel,debug=False):
+		
+		"""Creates signal profiles for all experiments for a given channel.
+		
+		Args:
+			signalChannel (str): Name of channel for which signal profiles should be created. 
+			maskChannel (str): Name of channel used for masking. 
+		
+		Keyword Args:
+			debug (bool): Print debugging messages.
+		
+		"""
 		
 		for exp in self.exps:
 			angles,signals=exp.createChannelSignalProfile(signalChannel,maskChannel,debug=debug)
 	
 	def checkChannels(self):
 
-		"""Checks if all experiments have same channels."""
+		"""Checks if all experiments have same channels.
+		"""
 		
 		b=True
 		
@@ -115,6 +255,12 @@ class analysis:
 		.. warning:: When we align here, then this is done per stack. Thus, single stacks might get aligned differently.
 		   This is not a problem if there was a projection before, since then there is only a single stack. 
 		   Otherwise this part should be used with caution. Will need to fix this later.
+		
+		Args:
+			signalChannel (str): Name of channel to align.
+			
+		Keyword Args:
+			sideChannels (list): List of channel names that are supposed to be aligned the same way as signalChannel.
 		
 		"""
 		
@@ -200,6 +346,12 @@ class analysis:
 	
 	def checkMinPix(self,angles):
 		
+		"""Checks if min pixel requirement was fulfilled for a given channel.
+		
+		Returns:
+			bool: ``True`` if fulfilled.
+		"""
+		
 		if angles==None:
 			return False
 		else:
@@ -207,6 +359,23 @@ class analysis:
 	
 	def filterNaNStacks(self,angles,signals,name=""):
 		
+		"""Filter out all signal profiles that contain NaN.
+		
+		Args:
+			angles (list) : List of angle arrays.
+			signals (list): List of signal arrays.
+			
+		Keyword Args:
+			name (str): Additionally give name of experiment for debugging.
+		
+		Returns:
+			tuple: Tuple containing:
+			
+				* angles (list): List of angle arrays.
+				* signals (list): List of signal arrays.
+					
+		"""
+	
 		#Align distributions
 		anglesFiltered=[]
 		signalsFiltered=[]
@@ -221,6 +390,22 @@ class analysis:
 		return anglesFiltered,signalsFiltered	
 		
 	def getAlignedSignalStats(self,channel):
+		
+		"""Computes mean, standard diviation and error over all experiments 
+		for given channel.
+
+		Args:
+			channel (str): Name of channel.
+			
+		Returns:
+			tuple: Tuple containing:
+			
+				* angles (numpy.ndarray): Angle array.
+				* meanSignal (numpy.ndarray): Mean array.
+				* stdSignal (numpy.ndarray): Standard diviation array.
+				* sterrSignal (numpy.ndarray): Standard error array.
+				
+		"""
 		
 		#Compute 
 		signals=[]
@@ -242,6 +427,26 @@ class analysis:
 		return angles[0],meanSignal,stdSignal,sterrSignal,N
 		
 	def plotAlignedSignal(self,channel,ax=None,showErrBar=True,color='r',lw=1.,title="",showN=True):
+		
+		"""Computes and plots mean and standard error over all experiments 
+		for given channel.
+		
+		.. note:: Will create new axes if not specified.
+		
+		Args:
+			channel (str): Name of channel.
+			
+		Keyword Args:
+			ax (matplotlib.axes): Axes used for plotting.
+			showErrBar (bool): Flag to control if error bars should be shown.
+			color (str): Color of plot.
+			lw (float): Linewidth of plot.
+			title (str): Title of plot.
+			showN (bool): Show number of experiments.
+			
+		Returns:
+			matplotlib.axes: Axes used for plotting.
+		"""
 		
 		#Get data
 		angles,meanSignal,stdSignal,sterrSignal,N=self.getAlignedSignalStats(channel)
@@ -268,13 +473,11 @@ class analysis:
 		
 		return ax
 	
-	
-	
 	def save(self,fn):
+		
+		"""Saves analysis object to pickle file. 		
+		"""
+		
 		iom.saveToPickle(self,fn=fn)
 		
 		
-		
-			
-		
-	

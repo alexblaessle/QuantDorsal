@@ -55,6 +55,7 @@ def loadFromPickle(fn):
         return loadedFile
 
 def cleanUp():
+	
 	"""Calls garbage collector to clean up.
 	"""
 	
